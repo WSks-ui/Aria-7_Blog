@@ -1,0 +1,61 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import NavBar from "../components/NavBar.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  pubDate: Date;
+  updatedDate?: Date;
+  tags?: string[];
+  category?: string;
+  cover?: string;
+}
+
+const { title, description, pubDate, updatedDate, tags = [], category, cover } = Astro.props;
+const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+---
+
+<BaseLayout title={title} description={description} bodyClass="inner-page">
+  <NavBar compact />
+  <main class="page-frame article-frame">
+    <article class="article-shell glass-panel">
+      <a class="return-link" href="/blog">← 返回博客</a>
+      <header class="article-header">
+        <p class="eyebrow">NOTE / LOG</p>
+        <h1>{title}</h1>
+        <p>{description}</p>
+        <div class="article-meta">
+          <time datetime={pubDate.toISOString()}>{dateFormatter.format(pubDate)}</time>
+          {category && <span>{category}</span>}
+          {
+            updatedDate && (
+              <span>更新于 {dateFormatter.format(updatedDate)}</span>
+            )
+          }
+        </div>
+        {
+          cover && (
+            <img class="article-cover" src={cover} alt="" loading="eager" decoding="async" />
+          )
+        }
+        {
+          tags.length > 0 && (
+            <div class="tag-row" aria-label="文章标签">
+              {tags.map((tag) => (
+                <span>{tag}</span>
+              ))}
+            </div>
+          )
+        }
+      </header>
+      <div class="article-content">
+        <slot />
+      </div>
+    </article>
+  </main>
+</BaseLayout>

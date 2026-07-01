@@ -1,0 +1,48 @@
+---
+import NavBar from "../components/NavBar.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const works = [
+  {
+    title: "Aria-7th Lab",
+    desc: "当前这套 Astro 静态个人站，使用原生 CSS/JS 做视频背景、胶囊标签墙、滑动提示和轻量交互。",
+    tags: ["Astro", "Vanilla JS", "CSS"],
+  },
+  {
+    title: "2Bis AI 绘图平台",
+    desc: "从零搭建的全栈 AI 绘图项目，包含生成队列、积分、订阅额度和 API Key 控制台等模块。",
+    tags: ["FastAPI", "Vue3", "AI"],
+  },
+  {
+    title: "Firefly 音乐播放器改造",
+    desc: "把 Bilibili 音频源、自建播放列表和播放器控制逻辑接入旧版博客主题的实践记录。",
+    tags: ["Bilibili", "Astro", "Music"],
+  },
+];
+---
+
+<BaseLayout title="Works" description="Aria-7th Lab 的项目展示。" bodyClass="inner-page">
+  <NavBar compact />
+  <main class="page-frame">
+    <section class="page-hero glass-panel">
+      <p class="eyebrow">WORKS / PROJECTS</p>
+      <h1>正在整理的项目切片</h1>
+      <p>先把已经迁移过来的真实项目放进来：博客本体、AI 绘图平台、音乐播放器改造。后续可以继续补 GitHub 链接、截图和开发日志。</p>
+    </section>
+    <section class="work-grid">
+      {
+        works.map((work) => (
+          <article class="work-card glass-panel">
+            <h2>{work.title}</h2>
+            <p>{work.desc}</p>
+            <div class="tag-row">
+              {work.tags.map((tag) => (
+                <span>{tag}</span>
+              ))}
+            </div>
+          </article>
+        ))
+      }
+    </section>
+  </main>
+</BaseLayout>

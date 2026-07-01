@@ -1,0 +1,22 @@
+---
+import NavBar from "../components/NavBar.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Game" description="Aria-7th Lab 的轻量 playroom。" bodyClass="inner-page">
+  <NavBar compact />
+  <main class="page-frame">
+    <section class="page-hero glass-panel">
+      <p class="eyebrow">GAME / PLAYROOM</p>
+      <h1>Playroom</h1>
+      <p>这里预留小游戏入口。首版先做成静态占位，后续可以加入 Canvas 小游戏或收藏清单。</p>
+    </section>
+    <section class="mini-game glass-panel" data-click-counter>
+      <div class="counter-display">
+        <span>today mood</span>
+        <strong data-click-count>0</strong>
+      </div>
+      <button class="primary-button" type="button" data-click-button>收集一片花瓣</button>
+    </section>
+  </main>
+</BaseLayout>

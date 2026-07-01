@@ -1,0 +1,78 @@
+---
+import Announcement from "../components/Announcement.astro";
+import HeroTerminal from "../components/HeroTerminal.astro";
+import NavBar from "../components/NavBar.astro";
+import SakuraLayer from "../components/SakuraLayer.astro";
+import SideTools from "../components/SideTools.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Aria-7th Lab" bodyClass="home-page">
+  <main class="home-shell">
+    <NavBar />
+    <Announcement />
+    <SideTools />
+    <SakuraLayer />
+    <a class="scroll-rail glass-panel" href="#lab-feed" aria-label="滑动到首页内容区" data-scroll-rail>
+      <span class="scroll-rail__label">SCROLL</span>
+      <span class="scroll-rail__track" aria-hidden="true">
+        <span class="scroll-rail__thumb"></span>
+      </span>
+      <span class="scroll-rail__dots" aria-hidden="true"></span>
+    </a>
+
+    <section class="hero-section" aria-labelledby="hero-title">
+      <div class="hero-glow" aria-hidden="true"></div>
+      <p class="eyebrow hero-eyebrow">PERSONAL SCRAPBOOK / ANIME DIARY / DEV NOTES</p>
+      <h1 id="hero-title" class="hero-title">Aria-7th Lab</h1>
+      <HeroTerminal />
+      <a class="scroll-hint" href="#lab-feed">scroll@home:~$ &gt;&gt;</a>
+    </section>
+
+    <div class="page-divider" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <section class="home-next" id="lab-feed" aria-labelledby="lab-feed-title">
+      <video
+        class="home-next__video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        poster="/images/aria-bg-poster.webp"
+        aria-hidden="true"
+      >
+        <source src="/videos/aria-bg-1080.mp4" type="video/mp4" media="(min-width: 720px)" />
+        <source src="/videos/aria-bg-720.mp4" type="video/mp4" />
+      </video>
+
+      <div class="personal-tags" aria-label="个人标签">
+        <div class="personal-tags__brand">
+          <span class="personal-tag__pin" aria-hidden="true">Aria-7</span>
+          <span id="lab-feed-title" class="personal-tag__brand-name">Aria-7th Lab</span>
+          <span class="personal-tag__brand-sub">anime notes / tiny toys / dev memo</span>
+        </div>
+        <div class="personal-tags__cloud" data-physics-tags>
+          <a class="personal-tag personal-tag--large" href="/blog/">ACGN</a>
+          <span class="personal-tag">漫画手帐</span>
+          <span class="personal-tag">Anime Diary</span>
+          <a class="personal-tag personal-tag--wide" href="/blog/firefly-blog-build-notes/">博客搭建记录</a>
+          <a class="personal-tag" href="/works/">Frontend</a>
+          <span class="personal-tag">Astro</span>
+          <span class="personal-tag personal-tag--large">Aria-7</span>
+          <a class="personal-tag" href="/blog/2bis-ai-image-platform/">AI 绘图</a>
+          <a class="personal-tag" href="/blog/archinstall-archlinux/">Linux</a>
+          <span class="personal-tag personal-tag--wide">项目复盘</span>
+          <a class="personal-tag" href="/blog/bilibili-music-player/">音乐收藏</a>
+          <a class="personal-tag" href="/me/">个人档案</a>
+          <span class="personal-tag">碎碎念</span>
+          <span class="personal-tag personal-tag--wide">Record the fleeting mortal moments</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

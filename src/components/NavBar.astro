@@ -1,0 +1,37 @@
+---
+import { CodeXml, Gamepad2, House, NotebookText, UserRound } from "@lucide/astro";
+
+interface Props {
+  compact?: boolean;
+}
+
+const { compact = false } = Astro.props;
+
+const navItems = [
+  { href: "/", label: "HOME", sub: "front page", icon: House },
+  { href: "/blog", label: "BLOG", sub: "notes", icon: NotebookText },
+  { href: "/game", label: "GAME", sub: "playroom", icon: Gamepad2 },
+  { href: "/works", label: "WORKS", sub: "projects", icon: CodeXml },
+  { href: "/me", label: "ME", sub: "profile", icon: UserRound },
+];
+---
+
+<header class:list={["site-header", { "site-header--compact": compact }]}>
+  <a class="brand-pill" href="/" aria-label="Aria-7th Lab home">
+    <span class="brand-mascot" aria-hidden="true">A7</span>
+    <strong>Aria-7th Lab</strong>
+  </a>
+  <nav class="nav-pill glass-panel" aria-label="主导航">
+    {
+      navItems.map(({ href, label, sub, icon: Icon }) => (
+        <a class:list={["nav-link", { active: Astro.url.pathname === href }]} href={href}>
+          <Icon size={22} stroke-width={2.2} aria-hidden="true" />
+          <span>
+            <strong>{label}</strong>
+            <small>{sub}</small>
+          </span>
+        </a>
+      ))
+    }
+  </nav>
+</header>

@@ -1,0 +1,53 @@
+---
+import { getCollection } from "astro:content";
+import NavBar from "../../components/NavBar.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const posts = (await getCollection("blog"))
+  .filter((post) => !post.data.draft)
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+---
+
+<BaseLayout title="Blog" description="Aria-7th Lab 的笔记、札记和更新。" bodyClass="inner-page">
+  <NavBar compact />
+  <main class="page-frame">
+    <section class="page-hero glass-panel">
+      <p class="eyebrow">BLOG / NOTES</p>
+      <h1>慢慢写下来的东西</h1>
+      <p>技术折腾、项目复盘、博客搭建和一点日常记录。迁移自旧版 Firefly 博客的文章会继续在这里更新。</p>
+    </section>
+
+    <section class="post-grid" aria-label="文章列表">
+      {
+        posts.map((post) => (
+          <article class="post-card glass-panel">
+            <a href={`/blog/${post.id}/`} aria-label={`阅读 ${post.data.title}`}>
+              {
+                post.data.cover && (
+                  <img class="post-card__cover" src={post.data.cover} alt="" loading="lazy" decoding="async" />
+                )
+              }
+              <div class="post-card__meta">
+                <time datetime={post.data.pubDate.toISOString()}>{dateFormatter.format(post.data.pubDate)}</time>
+                {post.data.category && <span>{post.data.category}</span>}
+              </div>
+              <h2>{post.data.title}</h2>
+              <p>{post.data.description}</p>
+              <div class="tag-row">
+                {post.data.tags.map((tag) => (
+                  <span>{tag}</span>
+                ))}
+              </div>
+            </a>
+          </article>
+        ))
+      }
+    </section>
+  </main>
+</BaseLayout>

@@ -1,0 +1,19 @@
+---
+import { Moon, Palette, Search, Settings2 } from "@lucide/astro";
+---
+
+<aside class="side-tools glass-panel" aria-label="页面工具">
+  <span>TOOLS</span>
+  <button class="tool-button" type="button" data-tool="search" aria-label="搜索">
+    <Search size={18} />
+  </button>
+  <button class="tool-button" type="button" data-tool="theme" aria-label="切换氛围色">
+    <Palette size={18} />
+  </button>
+  <button class="tool-button" type="button" data-tool="quiet" aria-label="安静模式">
+    <Moon size={18} />
+  </button>
+  <button class="tool-button" type="button" data-tool="settings" aria-label="设置">
+    <Settings2 size={18} />
+  </button>
+</aside>

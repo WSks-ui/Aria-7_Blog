@@ -1,0 +1,20 @@
+---
+import { Heart } from "@lucide/astro";
+---
+
+<div class="announcement-widget">
+  <button class="announcement-button glass-panel" type="button" data-announcement-open aria-haspopup="dialog">
+    <Heart size={18} fill="currentColor" aria-hidden="true" />
+    <span>今日公告</span>
+  </button>
+  <dialog class="announcement-dialog glass-panel" data-announcement-dialog aria-label="今日公告">
+    <form method="dialog">
+      <button class="icon-button" value="close" aria-label="关闭公告">×</button>
+    </form>
+    <p class="eyebrow">TODAY</p>
+    <h2>第七咏叹调实验室上线。</h2>
+    <p>
+      这里是 Aria-7th Lab：漫画、二次元文化、技术笔记和日常记录会慢慢归档在这里。
+    </p>
+  </dialog>
+</div>
