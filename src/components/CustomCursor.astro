@@ -1,0 +1,288 @@
+---
+import "../styles/custom-cursor.css";
+---
+
+<div class="custom-cursor-layer" aria-hidden="true" data-custom-cursor>
+  <span class="custom-cursor-dot" data-custom-cursor-dot></span>
+  <span class="custom-cursor-orbit" data-custom-cursor-orbit></span>
+  <span class="custom-cursor-toast" data-custom-cursor-toast></span>
+</div>
+
+<script is:inline>
+  (() => {
+    if (window.__ariaCustomCursorReady) return;
+    window.__ariaCustomCursorReady = true;
+
+    const root = document.documentElement;
+    const minWidth = 1024;
+    const finePointer = window.matchMedia("(pointer: fine)");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let layer = null;
+    let dot = null;
+    let orbit = null;
+    let toast = null;
+    let enabled = false;
+    let pressing = false;
+    let pointerX = 0;
+    let pointerY = 0;
+    let orbitX = 0;
+    let orbitY = 0;
+    let frameId = 0;
+    let longPressTimer = 0;
+    let toastTimer = 0;
+    let pressStartX = 0;
+    let pressStartY = 0;
+    let suppressNextClick = false;
+    let suppressClickTimer = 0;
+    const dotSize = 16;
+    const orbitSize = 24;
+    const longPressDelay = 680;
+    const clipboardTimeout = 420;
+
+    const shouldEnable = () =>
+      window.innerWidth >= minWidth && finePointer.matches && !reducedMotion.matches;
+
+    const syncElements = () => {
+      layer = document.querySelector("[data-custom-cursor]");
+      dot = document.querySelector("[data-custom-cursor-dot]");
+      orbit = document.querySelector("[data-custom-cursor-orbit]");
+      toast = document.querySelector("[data-custom-cursor-toast]");
+    };
+
+    const setTransform = (element, x, y, size, extra = "") => {
+      if (!element) return;
+      element.style.transform = `translate3d(${x - size / 2}px, ${y - size / 2}px, 0) ${extra}`;
+    };
+
+    const animate = () => {
+      if (!enabled) return;
+      orbitX += (pointerX - orbitX) * 0.2;
+      orbitY += (pointerY - orbitY) * 0.2;
+      setTransform(dot, pointerX, pointerY, dotSize, pressing ? "scale(0.82)" : "");
+      setTransform(orbit, orbitX, orbitY, orbitSize, pressing ? "scale(0.82)" : "");
+      frameId = window.requestAnimationFrame(animate);
+    };
+
+    const startAnimation = () => {
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(animate);
+    };
+
+    const stopAnimation = () => {
+      if (!frameId) return;
+      window.cancelAnimationFrame(frameId);
+      frameId = 0;
+    };
+
+    const createRipple = (x, y) => {
+      if (!enabled || !layer) return;
+      const ripple = document.createElement("span");
+      ripple.className = "custom-cursor-ripple";
+      ripple.style.left = `${x}px`;
+      ripple.style.top = `${y}px`;
+      layer.appendChild(ripple);
+      ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
+    };
+
+    const hideToast = () => {
+      root.classList.remove("custom-cursor-toast-visible");
+    };
+
+    const showToast = (message, x = pointerX, y = pointerY) => {
+      if (!toast || !document.contains(toast)) syncElements();
+      if (!toast) return;
+      window.clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.style.left = `${Math.min(window.innerWidth - 210, Math.max(16, x + 18))}px`;
+      toast.style.top = `${Math.min(window.innerHeight - 72, Math.max(16, y + 18))}px`;
+      root.classList.add("custom-cursor-toast-visible");
+      toastTimer = window.setTimeout(hideToast, 1500);
+    };
+
+    const copyTextByInput = (text) => {
+      const input = document.createElement("textarea");
+      const selection = window.getSelection();
+      const ranges = [];
+
+      if (selection) {
+        for (let index = 0; index < selection.rangeCount; index += 1) {
+          ranges.push(selection.getRangeAt(index).cloneRange());
+        }
+      }
+
+      input.value = text;
+      input.setAttribute("readonly", "");
+      input.style.position = "fixed";
+      input.style.inset = "0 auto auto -999px";
+      input.style.opacity = "0";
+      document.body.appendChild(input);
+      input.focus({ preventScroll: true });
+      input.select();
+
+      const execCopy = document["exec" + "Command"];
+      const ok = typeof execCopy === "function" ? execCopy.call(document, "copy") : false;
+      input.remove();
+
+      // 复制时会临时选中隐藏输入框，这里尽量恢复用户原本选中的文字。
+      if (selection && ranges.length) {
+        selection.removeAllRanges();
+        ranges.forEach((range) => selection.addRange(range));
+      }
+
+      return ok;
+    };
+
+    const copyText = async (text) => {
+      if (!text) return false;
+      if (copyTextByInput(text)) return true;
+
+      if (!navigator.clipboard?.writeText) return false;
+
+      try {
+        return await Promise.race([
+          navigator.clipboard.writeText(text).then(() => true),
+          new Promise((resolve) => window.setTimeout(() => resolve(false), clipboardTimeout)),
+        ]);
+      } catch {
+        return false;
+      }
+    };
+
+    const clearLongPress = () => {
+      window.clearTimeout(longPressTimer);
+      longPressTimer = 0;
+    };
+
+    const runLongPressCopy = async () => {
+      longPressTimer = 0;
+      suppressNextClick = true;
+      const selectedText = window.getSelection()?.toString().trim() || "";
+      const text = selectedText || window.location.href;
+      const ok = await copyText(text);
+      showToast(ok ? (selectedText ? "已复制选中文本" : "已复制当前链接") : "复制失败，请手动复制");
+    };
+
+    const onPointerMove = (event) => {
+      if (event.pointerType && event.pointerType !== "mouse") return;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      if (longPressTimer) {
+        const dx = event.clientX - pressStartX;
+        const dy = event.clientY - pressStartY;
+        if (Math.hypot(dx, dy) > 10) clearLongPress();
+      }
+      if (enabled) root.classList.add("custom-cursor-visible");
+    };
+
+    const onPointerDown = (event) => {
+      if (event.button !== 0) return;
+      pressing = true;
+      pressStartX = event.clientX;
+      pressStartY = event.clientY;
+      clearLongPress();
+      longPressTimer = window.setTimeout(runLongPressCopy, longPressDelay);
+      if (enabled) root.classList.add("custom-cursor-pressing");
+    };
+
+    const onPointerUp = (event) => {
+      if (event.button !== 0) return;
+      pressing = false;
+      clearLongPress();
+      if (enabled) root.classList.remove("custom-cursor-pressing");
+      createRipple(event.clientX, event.clientY);
+
+      // 长按复制后通常会紧接着触发一次 click，短暂保留拦截标记即可。
+      if (suppressNextClick) {
+        window.clearTimeout(suppressClickTimer);
+        suppressClickTimer = window.setTimeout(() => {
+          suppressNextClick = false;
+        }, 120);
+      }
+    };
+
+    const onClick = (event) => {
+      if (!suppressNextClick) return;
+      suppressNextClick = false;
+      window.clearTimeout(suppressClickTimer);
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onContextMenu = (event) => {
+      event.preventDefault();
+      if (enabled) root.classList.add("custom-cursor-visible");
+      showToast("右键菜单已关闭", event.clientX, event.clientY);
+    };
+
+    const onExternalToast = (event) => {
+      const detail = event.detail || {};
+      if (enabled) root.classList.add("custom-cursor-visible");
+      showToast(detail.message || "收到啦", detail.x, detail.y);
+    };
+
+    const onPointerLeave = () => {
+      root.classList.remove("custom-cursor-visible", "custom-cursor-pressing");
+      pressing = false;
+      clearLongPress();
+    };
+
+    const activate = () => {
+      if (enabled || !shouldEnable()) return;
+      syncElements();
+      if (!layer || !dot || !orbit) return;
+      enabled = true;
+      pointerX = window.innerWidth / 2;
+      pointerY = window.innerHeight / 2;
+      orbitX = pointerX;
+      orbitY = pointerY;
+      root.classList.add("custom-cursor-active");
+      startAnimation();
+    };
+
+    const deactivate = () => {
+      if (!enabled) return;
+      enabled = false;
+      pressing = false;
+      suppressNextClick = false;
+      window.clearTimeout(suppressClickTimer);
+      clearLongPress();
+      hideToast();
+      stopAnimation();
+      root.classList.remove(
+        "custom-cursor-active",
+        "custom-cursor-visible",
+        "custom-cursor-pressing",
+      );
+      layer
+        ?.querySelectorAll(".custom-cursor-ripple")
+        .forEach((ripple) => ripple.remove());
+    };
+
+    const refresh = () => {
+      if (shouldEnable()) activate();
+      else deactivate();
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", refresh, { once: true });
+    } else {
+      refresh();
+    }
+
+    // Astro 后续若启用客户端路由，重新挂载页面后也能找回新的光标 DOM。
+    document.addEventListener("astro:page-load", () => {
+      deactivate();
+      window.setTimeout(refresh, 80);
+    });
+    document.addEventListener("mousemove", onPointerMove, { passive: true });
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("mouseup", onPointerUp);
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("mouseleave", onPointerLeave);
+    window.addEventListener("contextmenu", onContextMenu);
+    window.addEventListener("aria:cursor-toast", onExternalToast);
+    window.addEventListener("resize", refresh, { passive: true });
+    finePointer.addEventListener?.("change", refresh);
+    reducedMotion.addEventListener?.("change", refresh);
+  })();
+</script>

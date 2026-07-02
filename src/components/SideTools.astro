@@ -1,19 +1,137 @@
 ---
-import { Moon, Palette, Search, Settings2 } from "@lucide/astro";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Moon,
+  Music2,
+  Palette,
+  Pause,
+  Play,
+  Search,
+  Settings2,
+  Sparkles,
+  Volume2,
+} from "@lucide/astro";
 ---
 
-<aside class="side-tools glass-panel" aria-label="页面工具">
-  <span>TOOLS</span>
-  <button class="tool-button" type="button" data-tool="search" aria-label="搜索">
-    <Search size={18} />
-  </button>
-  <button class="tool-button" type="button" data-tool="theme" aria-label="切换氛围色">
-    <Palette size={18} />
-  </button>
-  <button class="tool-button" type="button" data-tool="quiet" aria-label="安静模式">
-    <Moon size={18} />
-  </button>
-  <button class="tool-button" type="button" data-tool="settings" aria-label="设置">
-    <Settings2 size={18} />
-  </button>
+<aside class="side-tools" aria-label="Aria Dock 页面控制台" data-side-tools data-music-root>
+  <div class="side-tools__tab glass-panel" aria-label="Aria Dock 书签">
+    <button
+      class="side-tools__open"
+      type="button"
+      data-console-trigger
+      aria-label="展开 Aria Dock 控制台"
+      aria-expanded="false"
+    >
+      <span>ARIA</span>
+    </button>
+    <button class="side-tools__quick-play" type="button" data-music-toggle aria-label="播放 Aria Radio">
+      <Play class="music-icon music-icon--play" size={20} />
+      <Pause class="music-icon music-icon--pause" size={20} />
+    </button>
+  </div>
+
+  <section class="side-console glass-panel" aria-label="Aria-7 控制台" data-side-console>
+    <header class="side-console__header">
+      <span class="side-console__badge" aria-hidden="true">
+        <Sparkles size={18} />
+      </span>
+      <div>
+        <strong>Aria Dock</strong>
+        <small>soft tools / radio / mood</small>
+      </div>
+      <button class="side-console__dot" type="button" data-tool="theme" aria-label="切换氛围色">
+        <Palette size={16} />
+      </button>
+    </header>
+
+    <p class="side-console__status">点击左侧书签打开控制台，底部音符可快速播放 Aria Radio。</p>
+
+    <div class="side-console__actions" aria-label="快捷操作">
+      <button type="button" data-tool="search">读笔记</button>
+      <a href="/works/">看作品</a>
+      <button type="button" data-tool="quiet">安静模式</button>
+      <a href="/me/">个人档案</a>
+    </div>
+
+    <section class="music-card" aria-label="音乐播放器" data-music-player data-music-surface>
+      <audio data-music-audio preload="none"></audio>
+
+      <div class="music-card__title">
+        <span aria-hidden="true"><Music2 size={20} /></span>
+        <strong>Aria Radio</strong>
+      </div>
+
+      <div class="music-card__main">
+        <div class="music-cover" aria-hidden="true" data-music-cover>
+          <div class="music-disc">
+            <Music2 size={34} />
+          </div>
+        </div>
+        <div>
+          <span class="music-card__eyebrow">ARIA PLAYLIST</span>
+          <strong data-music-title>使一颗心免于哀伤</strong>
+          <small data-music-artist>知更鸟 / HOYO-MiX / Chevy</small>
+          <span class="music-card__count" data-music-count>1 / 1</span>
+        </div>
+      </div>
+
+      <div class="music-progress">
+        <div class="music-progress__label">
+          <span>播放进度</span>
+          <strong><span data-music-current>0:00</span> / <span data-music-duration>0:00</span></strong>
+        </div>
+        <input class="music-range" type="range" min="0" max="100" value="0" step="0.1" data-music-progress aria-label="播放进度" />
+      </div>
+
+      <div class="music-controls" aria-label="播放控制">
+        <button class="music-icon-button" type="button" data-music-prev aria-label="上一首">
+          <ChevronLeft size={24} />
+        </button>
+        <button class="music-icon-button music-icon-button--primary" type="button" data-music-toggle aria-label="播放">
+          <Play class="music-icon music-icon--play" size={28} />
+          <Pause class="music-icon music-icon--pause" size={28} />
+        </button>
+        <button class="music-icon-button" type="button" data-music-next aria-label="下一首">
+          <ChevronRight size={24} />
+        </button>
+      </div>
+
+      <label class="music-volume">
+        <span>音量</span>
+        <Volume2 size={20} aria-hidden="true" />
+        <input class="music-range" type="range" min="0" max="1" value="0.72" step="0.01" data-music-volume aria-label="音量" />
+      </label>
+
+      <div class="music-track-list" data-music-list aria-label="播放列表">
+        <!-- 这里只保留旧版博客中实际打包进仓库的本地曲目；Meting / B 站歌单需要后续单独接入。 -->
+        <button
+          class="is-active"
+          type="button"
+          data-music-track
+          data-src="/audio/%E4%BD%BF%E4%B8%80%E9%A2%97%E5%BF%83%E5%85%8D%E4%BA%8E%E5%93%80%E4%BC%A4-%E5%93%BC%E5%94%B1.mp3"
+          data-title="使一颗心免于哀伤"
+          data-artist="知更鸟 / HOYO-MiX / Chevy"
+          data-cover="/audio/cover/109951169585655912.webp"
+        >
+          使一颗心免于哀伤
+        </button>
+      </div>
+    </section>
+
+    <div class="side-console__footer" aria-label="页面工具">
+      <button class="tool-button" type="button" data-tool="search" aria-label="搜索">
+        <Search size={18} />
+      </button>
+      <button class="tool-button" type="button" data-tool="theme" aria-label="切换氛围色">
+        <Palette size={18} />
+      </button>
+      <button class="tool-button" type="button" data-tool="quiet" aria-label="安静模式">
+        <Moon size={18} />
+      </button>
+      <button class="tool-button" type="button" data-tool="settings" aria-label="设置">
+        <Settings2 size={18} />
+      </button>
+    </div>
+  </section>
 </aside>

@@ -2,14 +2,69 @@
 const commands = ["pin -r blog", "open works", "cat aria.md", "play tiny-game"];
 ---
 
-<div class="terminal-card glass-panel" data-terminal data-commands={JSON.stringify(commands)}>
-  <div class="terminal-dots" aria-hidden="true">
-    <span></span>
-    <span></span>
-    <span></span>
+<div class="hero-terminal" data-terminal-shell>
+  <div
+    class="terminal-card glass-panel"
+    role="button"
+    tabindex="0"
+    aria-label="打开 Aria 终端"
+    aria-controls="aria-terminal-stage"
+    aria-expanded="false"
+    data-terminal
+    data-commands={JSON.stringify(commands)}
+  >
+    <div class="terminal-dots" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <span class="terminal-avatar" aria-hidden="true">A7</span>
+    <code>
+      aria@7th-lab:~$ <span data-terminal-text>pin -r blog</span><span class="caret" aria-hidden="true"></span>
+    </code>
   </div>
-  <span class="terminal-avatar" aria-hidden="true">A7</span>
-  <code>
-    aria@7th-lab:~$ <span data-terminal-text>pin -r blog</span><span class="caret" aria-hidden="true"></span>
-  </code>
+
+  <div id="aria-terminal-stage" class="terminal-stage" data-terminal-stage aria-hidden="true" inert>
+    <div class="terminal-stage__inner" aria-label="Aria 终端舞台">
+      <aside class="terminal-stage__actor" aria-label="Aria 头像助手">
+        <button
+          class="terminal-stage__avatar"
+          type="button"
+          data-terminal-avatar
+          aria-label="点击头像"
+        >
+          <img src="/images/aria-avatar.jpg" alt="Aria-7 头像" loading="lazy" />
+          <span aria-hidden="true">A7</span>
+        </button>
+        <p class="terminal-stage__bubble" data-terminal-bubble>点一下头像，会掉出一张随机小纸条。</p>
+      </aside>
+
+      <section class="terminal-console" data-terminal-console aria-label="Aria 命令提示符窗口">
+        <div class="terminal-console__chrome">
+          <div class="terminal-console__dots" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <span class="terminal-console__title">Aria-7th Lab / Command Prompt</span>
+        </div>
+
+        <div class="terminal-console__screen">
+          <p class="terminal-console__muted">AriaOS [Version 7.7.7]</p>
+          <p><strong>C:\Users\Aria-7&gt;</strong> boot aria-shell</p>
+          <p>Loading manga notes, music cache, tiny dev memo...</p>
+          <p class="terminal-console__prompt">
+            <strong>C:\Users\Aria-7&gt;</strong>
+            <span data-terminal-window-text></span><i aria-hidden="true"></i>
+          </p>
+        </div>
+
+        <div class="terminal-console__actions">
+          <a href="https://github.com/WSks-ui" target="_blank" rel="noopener noreferrer">
+            Open GitHub
+          </a>
+        </div>
+      </section>
+    </div>
+  </div>
 </div>

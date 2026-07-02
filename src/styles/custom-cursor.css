@@ -1,0 +1,140 @@
+/* 自定义光标只在桌面精确指针上启用；移动端和低动效模式保留系统光标。 */
+html.custom-cursor-active,
+html.custom-cursor-active * {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12'%3E%3Ccircle cx='6' cy='6' r='4' fill='%23f29abd' opacity='0.78'/%3E%3Ccircle cx='6' cy='6' r='2' fill='white' opacity='0.82'/%3E%3C/svg%3E")
+      6 6,
+    auto !important;
+}
+
+.custom-cursor-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+html.custom-cursor-visible .custom-cursor-layer {
+  opacity: 1;
+}
+
+.custom-cursor-dot,
+.custom-cursor-orbit,
+.custom-cursor-ripple,
+.custom-cursor-toast {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: block;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.custom-cursor-dot {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.92), transparent 36%),
+    linear-gradient(135deg, var(--pink), var(--blue));
+  box-shadow:
+    0 0 0 1px rgba(242, 154, 189, 0.28),
+    0 0 18px rgba(242, 154, 189, 0.42);
+}
+
+.custom-cursor-orbit {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.64), transparent 22%),
+    rgba(255, 232, 242, 0.18);
+  box-shadow:
+    inset 0 0 0 1px rgba(242, 154, 189, 0.18),
+    0 0 0 1px rgba(159, 216, 239, 0.2),
+    0 12px 28px rgba(54, 68, 92, 0.14);
+  backdrop-filter: blur(3px);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+html.custom-cursor-pressing .custom-cursor-orbit {
+  border-color: rgba(242, 154, 189, 0.72);
+  background-color: rgba(255, 221, 235, 0.26);
+  box-shadow:
+    inset 0 0 0 1px rgba(242, 154, 189, 0.28),
+    0 0 0 5px rgba(255, 255, 255, 0.16),
+    0 16px 34px rgba(54, 68, 92, 0.16);
+}
+
+.custom-cursor-toast {
+  max-width: min(210px, calc(100vw - 32px));
+  min-height: 36px;
+  opacity: 0;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(255, 246, 251, 0.92), rgba(238, 249, 255, 0.88)),
+    rgba(255, 255, 255, 0.82);
+  color: #526078;
+  padding: 9px 15px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1.15;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.84),
+    0 14px 34px rgba(54, 68, 92, 0.16);
+  transform: translateY(8px) scale(0.96);
+  transition:
+    opacity 160ms ease,
+    transform 180ms ease;
+  backdrop-filter: blur(12px) saturate(1.08);
+}
+
+html.custom-cursor-toast-visible .custom-cursor-toast {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.custom-cursor-ripple {
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(255, 228, 239, 0.78);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(242, 154, 189, 0.2), transparent 62%),
+    rgba(159, 216, 239, 0.12);
+  box-shadow: 0 0 22px rgba(242, 154, 189, 0.28);
+  translate: -50% -50%;
+  animation: ariaCursorRipple 620ms ease-out forwards;
+}
+
+@keyframes ariaCursorRipple {
+  from {
+    opacity: 0.82;
+    transform: scale(0.22);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(2.8);
+  }
+}
+
+@media (max-width: 1023px), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  html.custom-cursor-active,
+  html.custom-cursor-active * {
+    cursor: auto !important;
+  }
+
+  .custom-cursor-layer {
+    display: none;
+  }
+}

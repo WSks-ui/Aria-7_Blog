@@ -17,14 +17,89 @@
     window.addEventListener("load", syncInitialHash, { once: true });
   }
 
-  // 终端只负责展示氛围，不参与路由逻辑，后续可把命令映射到真实导航。
+  if (labFeed && !reduceMotion) {
+    let feedPointerFrame = 0;
+    let feedPointerEvent = null;
+
+    const resetFeedPointer = () => {
+      feedPointerEvent = null;
+      if (feedPointerFrame) {
+        window.cancelAnimationFrame(feedPointerFrame);
+        feedPointerFrame = 0;
+      }
+      labFeed.classList.remove("is-pointer-active");
+      labFeed.style.setProperty("--feed-pointer-x", "0");
+      labFeed.style.setProperty("--feed-pointer-y", "0");
+      labFeed.style.setProperty("--feed-spot-x", "50%");
+      labFeed.style.setProperty("--feed-spot-y", "44%");
+    };
+
+    const syncFeedPointer = () => {
+      feedPointerFrame = 0;
+      if (!feedPointerEvent) return;
+
+      const bounds = labFeed.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const x = (feedPointerEvent.clientX - bounds.left) / bounds.width;
+      const y = (feedPointerEvent.clientY - bounds.top) / bounds.height;
+
+      // 标签墙的物理坐标由下方脚本写入 transform，这里只同步 CSS 变量做轻量视差和光斑。
+      labFeed.classList.add("is-pointer-active");
+      labFeed.style.setProperty("--feed-pointer-x", ((x - 0.5) * 2).toFixed(3));
+      labFeed.style.setProperty("--feed-pointer-y", ((y - 0.5) * 2).toFixed(3));
+      labFeed.style.setProperty("--feed-spot-x", `${Math.round(x * 100)}%`);
+      labFeed.style.setProperty("--feed-spot-y", `${Math.round(y * 100)}%`);
+    };
+
+    labFeed.addEventListener("pointermove", (event) => {
+      if (event.pointerType === "touch") return;
+      feedPointerEvent = event;
+      if (!feedPointerFrame) feedPointerFrame = window.requestAnimationFrame(syncFeedPointer);
+    });
+    labFeed.addEventListener("pointerleave", resetFeedPointer);
+  }
+
+  // 首页终端条是触发入口；打开后只替换当前卡片区域，不再生成全屏遮罩层。
   const terminal = document.querySelector("[data-terminal]");
   if (terminal) {
     const output = terminal.querySelector("[data-terminal-text]");
     const commands = JSON.parse(terminal.dataset.commands || "[]");
+    const terminalShell = terminal.closest("[data-terminal-shell]");
+    const terminalHero = terminal.closest(".hero-section");
+    const terminalStage = terminalShell?.querySelector("[data-terminal-stage]");
+    const terminalAvatar = terminalStage?.querySelector("[data-terminal-avatar]");
+    const terminalBubble = terminalStage?.querySelector("[data-terminal-bubble]");
+    const terminalTyped = terminalStage?.querySelector("[data-terminal-window-text]");
+    const terminalBubbleTexts = [
+      "今天也把灵感收进小抽屉里。",
+      "先写一点点也算启动成功。",
+      "漫画、音乐和代码都可以慢慢整理。",
+      "如果页面卡住，就先喝口水再 debug。",
+      "Aria-7th Lab 正在记录短暂但可爱的瞬间。",
+    ];
+    const terminalTypeLines = [
+      "哈喽哇",
+      "崎愿-よねやま ( ´∀`)",
+      "soft signals drifting through Aria-7th Lab",
+      "今日は漫画と音楽を少しだけ整理する",
+      "record the fleeting mortal moments",
+    ];
     let commandIndex = 0;
     let charIndex = 0;
     let deleting = false;
+    let bubbleIndex = Math.floor(Math.random() * terminalBubbleTexts.length);
+    let isTerminalOpen = false;
+    let terminalTypingTimer = 0;
+    let terminalCloseTimer = 0;
+    const terminalLineHoldDelay = 5000;
+
+    const showCursorToast = (message, x, y) => {
+      window.dispatchEvent(
+        new CustomEvent("aria:cursor-toast", {
+          detail: { message, x, y },
+        }),
+      );
+    };
 
     const tick = () => {
       if (!output || reduceMotion || commands.length === 0) return;
@@ -32,13 +107,20 @@
       const current = commands[commandIndex];
       output.textContent = current.slice(0, charIndex);
 
+      if (!deleting && charIndex > current.length) {
+        window.setTimeout(() => {
+          deleting = true;
+          tick();
+        }, 1400);
+        return;
+      }
+
       if (!deleting && charIndex <= current.length) {
         charIndex += 1;
       } else if (deleting && charIndex > 0) {
         charIndex -= 1;
       }
 
-      if (charIndex > current.length + 7) deleting = true;
       if (deleting && charIndex === 0) {
         deleting = false;
         commandIndex = (commandIndex + 1) % commands.length;
@@ -48,6 +130,146 @@
     };
 
     tick();
+
+    const stopConsoleTyping = () => {
+      window.clearTimeout(terminalTypingTimer);
+      terminalTypingTimer = 0;
+    };
+
+    const startConsoleTyping = () => {
+      if (!terminalTyped || terminalTypeLines.length === 0) return;
+      stopConsoleTyping();
+
+      if (reduceMotion) {
+        terminalTyped.textContent = terminalTypeLines[terminalTypeLines.length - 1];
+        return;
+      }
+
+      const shuffledLines = [...terminalTypeLines].sort(() => Math.random() - 0.5);
+      let lineIndex = 0;
+      let letterIndex = 0;
+      let isDeleting = false;
+
+      const write = () => {
+        if (!isTerminalOpen) return;
+
+        const current = shuffledLines[lineIndex];
+        terminalTyped.textContent = current.slice(0, letterIndex);
+
+        if (!isDeleting && letterIndex > current.length) {
+          terminalTypingTimer = window.setTimeout(() => {
+            isDeleting = true;
+            write();
+          }, terminalLineHoldDelay);
+          return;
+        }
+
+        if (!isDeleting && letterIndex <= current.length) {
+          letterIndex += 1;
+        } else if (isDeleting && letterIndex > 0) {
+          letterIndex -= 1;
+        }
+
+        if (isDeleting && letterIndex === 0) {
+          isDeleting = false;
+          lineIndex = (lineIndex + 1) % shuffledLines.length;
+        }
+
+        terminalTypingTimer = window.setTimeout(write, isDeleting ? 32 : 68);
+      };
+
+      // 等头像滑到左侧、窗口展开后再启动输入，节奏上更像“开机完成”。
+      terminalTypingTimer = window.setTimeout(write, 1180);
+    };
+
+    const openTerminalWindow = () => {
+      if (!terminalShell || !terminalStage || isTerminalOpen) return;
+      window.clearTimeout(terminalCloseTimer);
+      terminalCloseTimer = 0;
+      isTerminalOpen = true;
+      terminalShell.classList.remove("is-closing");
+      terminalShell.classList.add("is-opening");
+      terminalHero?.classList.remove("is-terminal-closing");
+      terminalHero?.classList.add("is-terminal-open");
+      terminalStage.classList.remove("is-closing");
+      terminalStage.classList.remove("is-open");
+      terminalStage.classList.add("is-open");
+      terminalStage.setAttribute("aria-hidden", "false");
+      terminal.setAttribute("aria-expanded", "true");
+      if ("inert" in terminalStage) terminalStage.inert = false;
+      else terminalStage.removeAttribute("inert");
+      if (terminalTyped) terminalTyped.textContent = "";
+      startConsoleTyping();
+      window.setTimeout(() => {
+        if (!isTerminalOpen) return;
+        terminalShell.classList.remove("is-opening");
+        terminalShell.classList.add("is-open");
+      }, reduceMotion ? 0 : 260);
+      window.setTimeout(() => terminalAvatar?.focus({ preventScroll: true }), reduceMotion ? 0 : 980);
+    };
+
+    const closeTerminalWindow = () => {
+      if (!terminalShell || !terminalStage || !isTerminalOpen) return;
+      isTerminalOpen = false;
+      stopConsoleTyping();
+      window.clearTimeout(terminalCloseTimer);
+      terminalShell.classList.remove("is-opening");
+      terminalShell.classList.remove("is-open");
+      terminalShell.classList.add("is-closing");
+      terminalHero?.classList.remove("is-terminal-open");
+      terminalHero?.classList.add("is-terminal-closing");
+      terminalStage.classList.remove("is-open");
+      terminalStage.classList.add("is-closing");
+      terminal.setAttribute("aria-expanded", "false");
+      terminalCloseTimer = window.setTimeout(
+        () => {
+          terminalCloseTimer = 0;
+          if (isTerminalOpen) return;
+          terminalShell.classList.remove("is-closing");
+          terminalHero?.classList.remove("is-terminal-closing");
+          terminalStage.classList.remove("is-closing");
+          terminalStage.setAttribute("aria-hidden", "true");
+          if ("inert" in terminalStage) terminalStage.inert = true;
+          else terminalStage.setAttribute("inert", "");
+          if (terminalTyped) terminalTyped.textContent = "";
+          terminal.focus({ preventScroll: true });
+        },
+        reduceMotion ? 0 : 240,
+      );
+    };
+
+    terminal.addEventListener("click", openTerminalWindow);
+    terminal.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openTerminalWindow();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeTerminalWindow();
+    });
+
+    document.addEventListener("contextmenu", (event) => {
+      if (!isTerminalOpen) return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeTerminalWindow();
+      showCursorToast("右键偷偷溜回首页啦", event.clientX, event.clientY);
+    }, true);
+
+    terminalAvatar?.addEventListener("click", () => {
+      bubbleIndex = (bubbleIndex + 1 + Math.floor(Math.random() * (terminalBubbleTexts.length - 1))) % terminalBubbleTexts.length;
+      if (terminalBubble) {
+        terminalBubble.textContent = terminalBubbleTexts[bubbleIndex];
+        terminalBubble.classList.remove("is-pop");
+        void terminalBubble.offsetWidth;
+        terminalBubble.classList.add("is-pop");
+      }
+
+      terminalAvatar.classList.remove("is-shaking");
+      void terminalAvatar.offsetWidth;
+      terminalAvatar.classList.add("is-shaking");
+    });
   }
 
   const dialog = document.querySelector("[data-announcement-dialog]");
@@ -73,6 +295,235 @@
       }
     });
   });
+
+  const sideTools = document.querySelector("[data-side-tools]");
+  const consoleTrigger = document.querySelector("[data-console-trigger]");
+  if (sideTools && consoleTrigger) {
+    const sideConsole = sideTools.querySelector("[data-side-console]");
+
+    const syncConsoleState = () => {
+      const pinned = sideTools.classList.contains("is-pinned");
+      consoleTrigger.setAttribute("aria-expanded", String(pinned));
+      sideConsole?.setAttribute("aria-hidden", String(!pinned));
+      if (sideConsole && "inert" in sideConsole) sideConsole.inert = !pinned;
+    };
+
+    const setPinnedConsole = (open) => {
+      // 只通过点击书签打开完整控制台，避免鼠标经过时误触展开。
+      sideTools.classList.toggle("is-pinned", open);
+      syncConsoleState();
+      window.localStorage?.setItem("aria-console-pinned", String(open));
+    };
+
+    const togglePinnedConsole = () => {
+      setPinnedConsole(!sideTools.classList.contains("is-pinned"));
+    };
+
+    let pointerHandled = false;
+    consoleTrigger.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      // 收起态按钮获得焦点会让抽屉先位移，改用 pointerdown 提前处理，避免 click 落空。
+      event.preventDefault();
+      pointerHandled = true;
+      togglePinnedConsole();
+      window.setTimeout(() => {
+        pointerHandled = false;
+      }, 360);
+    });
+
+    consoleTrigger.addEventListener("click", (event) => {
+      if (pointerHandled) {
+        event.preventDefault();
+        pointerHandled = false;
+        return;
+      }
+
+      togglePinnedConsole();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (sideTools.classList.contains("is-pinned")) setPinnedConsole(false);
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (!sideTools.classList.contains("is-pinned")) return;
+      if (sideTools.contains(event.target)) return;
+      setPinnedConsole(false);
+    });
+
+    setPinnedConsole(window.localStorage?.getItem("aria-console-pinned") === "true");
+    syncConsoleState();
+  }
+
+  const musicRoot = document.querySelector("[data-music-root]");
+  const musicPlayer = document.querySelector("[data-music-player]");
+  if (musicRoot && musicPlayer) {
+    const audio = musicPlayer.querySelector("[data-music-audio]");
+    const toggles = [...musicRoot.querySelectorAll("[data-music-toggle]")];
+    const prevButton = musicPlayer.querySelector("[data-music-prev]");
+    const nextButton = musicPlayer.querySelector("[data-music-next]");
+    const titleNodes = [...musicRoot.querySelectorAll("[data-music-title]")];
+    const artistNodes = [...musicRoot.querySelectorAll("[data-music-artist]")];
+    const countNodes = [...musicRoot.querySelectorAll("[data-music-count]")];
+    const coverNodes = [...musicRoot.querySelectorAll("[data-music-cover]")];
+    const currentNodes = [...musicRoot.querySelectorAll("[data-music-current]")];
+    const durationNodes = [...musicRoot.querySelectorAll("[data-music-duration]")];
+    const progress = musicPlayer.querySelector("[data-music-progress]");
+    const volume = musicPlayer.querySelector("[data-music-volume]");
+    const tracks = [...musicPlayer.querySelectorAll("[data-music-track]")];
+    const storedTrack = Number(window.localStorage?.getItem("aria-music-track"));
+    const initialTrack = Number.isInteger(storedTrack) ? storedTrack : tracks.findIndex((track) => track.classList.contains("is-active"));
+    let activeIndex = Math.max(0, initialTrack);
+    let isSeeking = false;
+
+    const formatTime = (seconds) => {
+      if (!Number.isFinite(seconds)) return "0:00";
+      const minutes = Math.floor(seconds / 60);
+      const rest = Math.floor(seconds % 60)
+        .toString()
+        .padStart(2, "0");
+      return `${minutes}:${rest}`;
+    };
+
+    const syncPlayingState = () => {
+      const playing = audio instanceof HTMLAudioElement && !audio.paused && !audio.ended;
+      musicPlayer.classList.toggle("is-playing", playing);
+      musicRoot.classList.toggle("is-music-playing", playing);
+      toggles.forEach((button) => button.setAttribute("aria-label", playing ? "暂停" : "播放"));
+    };
+
+    const loadTrack = (index, shouldPlay = false, shouldLoad = true) => {
+      if (!(audio instanceof HTMLAudioElement) || tracks.length === 0) return;
+      activeIndex = (index + tracks.length) % tracks.length;
+      const track = tracks[activeIndex];
+      const src = track.dataset.src || "";
+
+      tracks.forEach((item) => item.classList.toggle("is-active", item === track));
+      titleNodes.forEach((node) => {
+        node.textContent = track.dataset.title || track.textContent?.trim() || "Untitled";
+      });
+      artistNodes.forEach((node) => {
+        node.textContent = track.dataset.artist || "Aria-7th Lab";
+      });
+      countNodes.forEach((node) => {
+        node.textContent = `${activeIndex + 1} / ${tracks.length}`;
+      });
+      coverNodes.forEach((node) => {
+        const cover = track.dataset.cover || "";
+        node.classList.toggle("has-cover", Boolean(cover));
+        if (cover) node.style.setProperty("--music-cover-image", `url("${cover}")`);
+        else node.style.removeProperty("--music-cover-image");
+      });
+      window.localStorage?.setItem("aria-music-track", String(activeIndex));
+
+      // 初始渲染只同步曲目信息；用户点击播放或切歌后才请求音频资源，减轻首页首屏负担。
+      if (shouldLoad && audio.getAttribute("src") !== src) {
+        audio.src = src;
+        if (!shouldPlay) audio.load();
+        if (progress instanceof HTMLInputElement) progress.value = "0";
+        currentNodes.forEach((node) => {
+          node.textContent = "0:00";
+        });
+        durationNodes.forEach((node) => {
+          node.textContent = "0:00";
+        });
+      }
+
+      if (shouldPlay) {
+        audio.play().catch(() => {
+          syncPlayingState();
+        });
+      }
+    };
+
+    const updateProgress = () => {
+      if (!(audio instanceof HTMLAudioElement)) return;
+      const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+      currentNodes.forEach((node) => {
+        node.textContent = formatTime(audio.currentTime);
+      });
+      durationNodes.forEach((node) => {
+        node.textContent = formatTime(duration);
+      });
+      if (progress instanceof HTMLInputElement && !isSeeking) {
+        progress.value = duration > 0 ? String((audio.currentTime / duration) * 100) : "0";
+      }
+    };
+
+    toggles.forEach((button) => button.addEventListener("click", () => {
+      if (!(audio instanceof HTMLAudioElement)) return;
+
+      if (audio.paused) {
+        if (!audio.getAttribute("src")) {
+          loadTrack(activeIndex, true, true);
+        } else {
+          audio.play().catch(() => {
+            syncPlayingState();
+          });
+        }
+      } else {
+        audio.pause();
+      }
+    }));
+
+    prevButton?.addEventListener("click", () => {
+      const shouldPlay = audio instanceof HTMLAudioElement && !audio.paused;
+      loadTrack(activeIndex - 1, shouldPlay);
+    });
+
+    nextButton?.addEventListener("click", () => {
+      const shouldPlay = audio instanceof HTMLAudioElement && !audio.paused;
+      loadTrack(activeIndex + 1, shouldPlay);
+    });
+
+    tracks.forEach((track, index) => {
+      track.addEventListener("click", () => {
+        const shouldPlay = audio instanceof HTMLAudioElement && !audio.paused;
+        loadTrack(index, shouldPlay, true);
+      });
+    });
+
+    progress?.addEventListener("input", () => {
+      isSeeking = true;
+      if (!(audio instanceof HTMLAudioElement) || !(progress instanceof HTMLInputElement)) return;
+      const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+      if (duration > 0) {
+        currentNodes.forEach((node) => {
+          node.textContent = formatTime((Number(progress.value) / 100) * duration);
+        });
+      }
+    });
+
+    progress?.addEventListener("change", () => {
+      if (!(audio instanceof HTMLAudioElement) || !(progress instanceof HTMLInputElement)) return;
+      const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+      if (duration > 0) audio.currentTime = (Number(progress.value) / 100) * duration;
+      isSeeking = false;
+      updateProgress();
+    });
+
+    volume?.addEventListener("input", () => {
+      if (audio instanceof HTMLAudioElement && volume instanceof HTMLInputElement) {
+        audio.volume = Number(volume.value);
+        window.localStorage?.setItem("aria-music-volume", volume.value);
+      }
+    });
+
+    audio?.addEventListener("play", syncPlayingState);
+    audio?.addEventListener("pause", syncPlayingState);
+    audio?.addEventListener("ended", () => loadTrack(activeIndex + 1, true));
+    audio?.addEventListener("loadedmetadata", updateProgress);
+    audio?.addEventListener("timeupdate", updateProgress);
+
+    if (audio instanceof HTMLAudioElement && volume instanceof HTMLInputElement) {
+      const storedVolume = window.localStorage?.getItem("aria-music-volume");
+      if (storedVolume !== null) volume.value = storedVolume;
+      audio.volume = Number(volume.value);
+    }
+    loadTrack(activeIndex, false, false);
+    syncPlayingState();
+  }
 
   const scrollRail = document.querySelector("[data-scroll-rail]");
   if (scrollRail) {

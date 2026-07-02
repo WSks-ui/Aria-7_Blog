@@ -3,9 +3,10 @@ import { CodeXml, Gamepad2, House, NotebookText, UserRound } from "@lucide/astro
 
 interface Props {
   compact?: boolean;
+  showBrand?: boolean;
 }
 
-const { compact = false } = Astro.props;
+const { compact = false, showBrand = true } = Astro.props;
 
 const navItems = [
   { href: "/", label: "HOME", sub: "front page", icon: House },
@@ -16,11 +17,15 @@ const navItems = [
 ];
 ---
 
-<header class:list={["site-header", { "site-header--compact": compact }]}>
-  <a class="brand-pill" href="/" aria-label="Aria-7th Lab home">
-    <span class="brand-mascot" aria-hidden="true">A7</span>
-    <strong>Aria-7th Lab</strong>
-  </a>
+<header class:list={["site-header", { "site-header--compact": compact, "site-header--brandless": !showBrand }]}>
+  {
+    showBrand && (
+      <a class="brand-pill" href="/" aria-label="Aria-7th Lab home">
+        <span class="brand-mascot" aria-hidden="true">A7</span>
+        <strong>Aria-7th Lab</strong>
+      </a>
+    )
+  }
   <nav class="nav-pill glass-panel" aria-label="主导航">
     {
       navItems.map(({ href, label, sub, icon: Icon }) => (
