@@ -3,20 +3,66 @@ import NavBar from "../components/NavBar.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 ---
 
-<BaseLayout title="Game" description="Aria-7th Lab 的轻量 playroom。" bodyClass="inner-page">
+<BaseLayout title="Chess Playroom" description="Aria-7th Lab 的柔和国际象棋小房间。" bodyClass="inner-page chess-page">
   <NavBar compact />
   <main class="page-frame">
-    <section class="page-hero glass-panel">
-      <p class="eyebrow">GAME / PLAYROOM</p>
-      <h1>Playroom</h1>
-      <p>这里预留小游戏入口。首版先做成静态占位，后续可以加入 Canvas 小游戏或收藏清单。</p>
+    <section class="page-hero glass-panel chess-hero">
+      <p class="eyebrow">GAME / CHESS PLAYROOM</p>
+      <h1>Aria Chess Room</h1>
+      <p>
+        一个轻量的国际象棋小房间。规则由 chess.js 处理，页面只保留柔和的视觉、落子提示和一点像桌面小玩具的反馈。
+      </p>
     </section>
-    <section class="mini-game glass-panel" data-click-counter>
-      <div class="counter-display">
-        <span>today mood</span>
-        <strong data-click-count>0</strong>
+
+    <section class="chess-room glass-panel" data-chess-room>
+      <div class="chess-room__main">
+        <div class="chess-board-shell">
+          <div class="chess-board__labels chess-board__labels--files" aria-hidden="true">
+            <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span>
+          </div>
+          <div class="chess-board" role="grid" aria-label="国际象棋棋盘" data-chess-board></div>
+          <div class="chess-board__labels chess-board__labels--ranks" aria-hidden="true">
+            <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
+          </div>
+        </div>
       </div>
-      <button class="primary-button" type="button" data-click-button>收集一片花瓣</button>
+
+      <aside class="chess-panel" aria-label="棋局控制台">
+        <div class="chess-panel__card">
+          <span class="chess-panel__kicker">ARIA BOARD</span>
+          <strong data-chess-status>白方先行。点一下棋子，再点目标格。</strong>
+          <p data-chess-tip>提示：高亮的小圆点是当前棋子的合法落点。</p>
+        </div>
+
+        <div class="chess-panel__actions" aria-label="棋局操作">
+          <button class="primary-button" type="button" data-chess-new>新开一局</button>
+          <button type="button" data-chess-undo>悔一步</button>
+          <button type="button" data-chess-flip>翻转棋盘</button>
+        </div>
+
+        <label class="chess-toggle">
+          <input type="checkbox" data-chess-ai checked />
+          <span>让 Aria 随机应一手</span>
+        </label>
+
+        <div class="chess-captured" aria-label="被吃掉的棋子">
+          <div>
+            <span>白方收集</span>
+            <strong data-chess-captured-white>还没有小棋子掉进口袋</strong>
+          </div>
+          <div>
+            <span>黑方收集</span>
+            <strong data-chess-captured-black>还没有小棋子掉进口袋</strong>
+          </div>
+        </div>
+
+        <div class="chess-move-log" aria-label="走子记录" data-chess-log>
+          <span class="chess-move-log__empty">棋谱会在这里慢慢写下来。</span>
+        </div>
+      </aside>
     </section>
   </main>
+  <script>
+    import "../scripts/chess-playroom.js";
+  </script>
 </BaseLayout>

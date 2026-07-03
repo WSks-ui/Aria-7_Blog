@@ -1,46 +1,131 @@
 ---
+import { ExternalLink, GitBranch, GitFork, Sparkles, Star } from "@lucide/astro";
 import NavBar from "../components/NavBar.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const works = [
+const repositories = [
   {
-    title: "Aria-7th Lab",
-    desc: "当前这套 Astro 静态个人站，使用原生 CSS/JS 做视频背景、胶囊标签墙、滑动提示和轻量交互。",
-    tags: ["Astro", "Vanilla JS", "CSS"],
+    name: "Aria-7_Blog",
+    url: "https://github.com/WSks-ui/Aria-7_Blog",
+    description: "新版 Aria-7th Lab，使用 Astro、原生 JS/CSS 和柔和漫画感视觉重新搭建的个人博客。",
+    language: "CSS",
+    stars: 0,
+    forks: 0,
+    updated: "2026-07-02",
+    mood: "now building",
+    tags: ["Astro", "Vanilla JS", "Blog"],
   },
   {
-    title: "2Bis AI 绘图平台",
-    desc: "从零搭建的全栈 AI 绘图项目，包含生成队列、积分、订阅额度和 API Key 控制台等模块。",
-    tags: ["FastAPI", "Vue3", "AI"],
+    name: "aria7-blog",
+    url: "https://github.com/WSks-ui/aria7-blog",
+    description: "旧版 Firefly 博客二次开发项目，保留了文章、音乐播放器、公告与一批可选择继承的博客功能。",
+    language: "Astro",
+    stars: 1,
+    forks: 0,
+    updated: "2026-06-29",
+    mood: "legacy base",
+    tags: ["Firefly", "Astro", "Theme"],
   },
   {
-    title: "Firefly 音乐播放器改造",
-    desc: "把 Bilibili 音频源、自建播放列表和播放器控制逻辑接入旧版博客主题的实践记录。",
-    tags: ["Bilibili", "Astro", "Music"],
+    name: "2bis",
+    url: "https://github.com/WSks-ui/2bis",
+    description: "文生图 / 图生图 Web 程序，围绕 GPT-image2 模型做生成流程、额度和平台化功能实验。",
+    language: "Python",
+    stars: 0,
+    forks: 0,
+    updated: "2026-06-30",
+    mood: "AI lab",
+    tags: ["AI", "Web", "Image"],
+  },
+  {
+    name: "interview-wind-tunnel",
+    url: "https://github.com/WSks-ui/interview-wind-tunnel",
+    description: "面试风洞：用极端面试场景模拟压力环境，测试真实抗压阈值的小型实验项目。",
+    language: "Python",
+    stars: 1,
+    forks: 0,
+    updated: "2026-07-01",
+    mood: "pressure test",
+    tags: ["Python", "AI", "Experiment"],
+  },
+  {
+    name: "EquatorialMmount",
+    url: "https://github.com/WSks-ui/EquatorialMmount",
+    description: "鸿蒙设备 AR 控制赤道仪案例，把设备控制、空间交互和观测场景放在一起试验。",
+    language: "TypeScript",
+    stars: 0,
+    forks: 0,
+    updated: "2026-07-03",
+    mood: "hardware spell",
+    tags: ["HarmonyOS", "AR", "TypeScript"],
+  },
+  {
+    name: "minimind-o-self",
+    url: "https://github.com/WSks-ui/minimind-o-self",
+    description: "MiniMind-O 学习副本，用来记录轻薄本本地推理和多模态模型体验过程。",
+    language: "Python",
+    stars: 1,
+    forks: 0,
+    updated: "2026-06-03",
+    mood: "learning copy",
+    tags: ["LLM", "Local AI", "Notes"],
   },
 ];
+
+const languageTone: Record<string, string> = {
+  Astro: "work-card__lang--astro",
+  CSS: "work-card__lang--css",
+  Python: "work-card__lang--python",
+  TypeScript: "work-card__lang--typescript",
+};
+
+const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 ---
 
-<BaseLayout title="Works" description="Aria-7th Lab 的项目展示。" bodyClass="inner-page">
+<BaseLayout title="Works" description="Aria-7th Lab 的 GitHub 项目展示。" bodyClass="inner-page">
   <NavBar compact />
   <main class="page-frame">
-    <section class="page-hero glass-panel">
-      <p class="eyebrow">WORKS / PROJECTS</p>
-      <h1>正在整理的项目切片</h1>
-      <p>先把已经迁移过来的真实项目放进来：博客本体、AI 绘图平台、音乐播放器改造。后续可以继续补 GitHub 链接、截图和开发日志。</p>
+    <section class="page-hero glass-panel works-hero">
+      <p class="eyebrow">WORKS / GITHUB PINS</p>
+      <h1>摆在桌面上的项目贴纸</h1>
+      <p>
+        这里先放 GitHub 主页里更适合展示的公开仓库。卡片会直接跳转到对应仓库，之后可以继续补项目截图、开发日志和线上预览地址。
+      </p>
     </section>
-    <section class="work-grid">
+
+    <section class="work-grid work-grid--repos" aria-label="GitHub 项目列表">
       {
-        works.map((work) => (
-          <article class="work-card glass-panel">
-            <h2>{work.title}</h2>
-            <p>{work.desc}</p>
+        repositories.map((repo, index) => (
+          <a class="work-card work-card--repo glass-panel" href={repo.url} target="_blank" rel="noreferrer">
+            <span class="work-card__pin" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+            <div class="work-card__topline">
+              <span class={`work-card__language ${languageTone[repo.language] ?? ""}`}>{repo.language}</span>
+              <span class="work-card__mood">
+                <Sparkles size={14} aria-hidden="true" />
+                {repo.mood}
+              </span>
+            </div>
+            <h2>
+              <GitBranch size={20} aria-hidden="true" />
+              {repo.name}
+            </h2>
+            <p>{repo.description}</p>
             <div class="tag-row">
-              {work.tags.map((tag) => (
+              {repo.tags.map((tag) => (
                 <span>{tag}</span>
               ))}
             </div>
-          </article>
+            <div class="work-card__meta">
+              <span><Star size={15} aria-hidden="true" /> {repo.stars}</span>
+              <span><GitFork size={15} aria-hidden="true" /> {repo.forks}</span>
+              <time datetime={repo.updated}>更新 {dateFormatter.format(new Date(repo.updated))}</time>
+              <span class="work-card__open">GitHub <ExternalLink size={14} aria-hidden="true" /></span>
+            </div>
+          </a>
         ))
       }
     </section>

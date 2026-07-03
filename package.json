@@ -13,9 +13,9 @@
     "@astrojs/check": "^0.9.4",
     "@lucide/astro": "^1.22.0",
     "astro": "^5.15.8",
+    "chess.js": "^1.4.0",
     "typescript": "^5.9.3"
   },
-  "devDependencies": {},
   "description": "",
   "main": "index.js",
   "keywords": [],
