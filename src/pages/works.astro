@@ -88,15 +88,7 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 
 <BaseLayout title="Works" description="Aria-7th Lab 的 GitHub 项目展示。" bodyClass="inner-page">
   <NavBar compact />
-  <main class="page-frame">
-    <section class="page-hero glass-panel works-hero">
-      <p class="eyebrow">WORKS / GITHUB PINS</p>
-      <h1>摆在桌面上的项目贴纸</h1>
-      <p>
-        这里先放 GitHub 主页里更适合展示的公开仓库。卡片会直接跳转到对应仓库，之后可以继续补项目截图、开发日志和线上预览地址。
-      </p>
-    </section>
-
+  <main class="page-frame works-frame">
     <section class="work-grid work-grid--repos" aria-label="GitHub 项目列表">
       {
         repositories.map((repo, index) => (
