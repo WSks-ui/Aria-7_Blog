@@ -20,16 +20,20 @@ const navItems = [
 <header class:list={["site-header", { "site-header--compact": compact, "site-header--brandless": !showBrand }]}>
   {
     showBrand && (
-      <a class="brand-pill" href="/" aria-label="Aria-7th Lab home">
-        <span class="brand-mascot" aria-hidden="true">A7</span>
+      <a class="brand-pill" href="/" aria-label="Aria-7th Lab home" data-astro-prefetch="viewport">
+        <span class="brand-mascot" aria-hidden="true">
+          <img src="/images/aria-avatar.jpg" alt="" loading="lazy" />
+        </span>
         <strong>Aria-7th Lab</strong>
       </a>
     )
   }
+  {(compact || !showBrand) && <span class="nav-hover-zone" aria-hidden="true"></span>}
+  {(compact || !showBrand) && <span class="nav-bookmark" aria-hidden="true">MENU</span>}
   <nav class="nav-pill glass-panel" aria-label="主导航">
     {
       navItems.map(({ href, label, sub, icon: Icon }) => (
-        <a class:list={["nav-link", { active: Astro.url.pathname === href }]} href={href}>
+        <a class:list={["nav-link", { active: Astro.url.pathname === href }]} href={href} data-astro-prefetch="viewport">
           <Icon size={22} stroke-width={2.2} aria-hidden="true" />
           <span>
             <strong>{label}</strong>
