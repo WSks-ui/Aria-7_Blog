@@ -1,7 +1,20 @@
 ---
 import { getCollection } from "astro:content";
+import {
+  Activity,
+  BookOpen,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  FileText,
+  Folder,
+  House,
+  Tags,
+} from "@lucide/astro";
 import NavBar from "../../components/NavBar.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPostMetrics } from "../../utils/postMetrics";
 
 const posts = (await getCollection("blog"))
   .filter((post) => !post.data.draft)
@@ -12,42 +25,196 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   month: "2-digit",
   day: "2-digit",
 });
+
+const currentDate = new Date();
+const dayMs = 24 * 60 * 60 * 1000;
+const blogStart = new Date("2026-05-21T00:00:00+08:00");
+const runtimeDays = Math.max(1, Math.ceil((currentDate.getTime() - blogStart.getTime()) / dayMs));
+const fallbackTopic = "杂谈";
+const topicOrder = ["技术", "建站记录", "杂谈"];
+const postEntries = posts.map((post) => ({
+  post,
+  metrics: getPostMetrics(post.body),
+  topic: post.data.category ?? fallbackTopic,
+}));
+const totalWords = postEntries.reduce((sum, entry) => sum + entry.metrics.words, 0);
+const latestEntry = postEntries[0];
+const latestActivityDate = latestEntry?.post.data.updatedDate ?? latestEntry?.post.data.pubDate ?? currentDate;
+const daysSinceLatest = Math.max(0, Math.floor((currentDate.getTime() - latestActivityDate.getTime()) / dayMs));
+const latestActivityText = daysSinceLatest === 0 ? "今天" : `${daysSinceLatest} 天前`;
+const uniqueTags = new Set(postEntries.flatMap(({ post }) => post.data.tags));
+const topicCounts = postEntries.reduce((map, entry) => {
+  map.set(entry.topic, (map.get(entry.topic) ?? 0) + 1);
+  return map;
+}, new Map<string, number>());
+const topics = [...topicCounts.entries()].sort((a, b) => {
+  const orderA = topicOrder.indexOf(a[0]);
+  const orderB = topicOrder.indexOf(b[0]);
+  if (orderA !== -1 || orderB !== -1) {
+    return (orderA === -1 ? 99 : orderA) - (orderB === -1 ? 99 : orderB);
+  }
+  return b[1] - a[1] || a[0].localeCompare(b[0], "zh-CN");
+});
+
+const dateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const postDateKeys = new Set(postEntries.map(({ post }) => dateKey(post.data.pubDate)));
+const calendarYear = currentDate.getFullYear();
+const calendarMonth = currentDate.getMonth();
+const calendarTitle = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "long",
+}).format(currentDate);
+const firstWeekday = new Date(calendarYear, calendarMonth, 1).getDay();
+const monthDays = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"];
+const calendarCells: Array<{
+  day: number | null;
+  key?: string;
+  isToday?: boolean;
+  hasPost?: boolean;
+}> = Array.from({ length: firstWeekday }, () => ({ day: null }));
+
+for (let day = 1; day <= monthDays; day += 1) {
+  const cellDate = new Date(calendarYear, calendarMonth, day);
+  const key = dateKey(cellDate);
+  calendarCells.push({
+    day,
+    key,
+    isToday: key === dateKey(currentDate),
+    hasPost: postDateKeys.has(key),
+  });
+}
+
+while (calendarCells.length % 7 !== 0) {
+  calendarCells.push({ day: null });
+}
 ---
 
-<BaseLayout title="Blog" description="Aria-7th Lab 的笔记、札记和更新。" bodyClass="inner-page">
+<BaseLayout title="Blog" description="Aria-7th Lab 的笔记、札记和更新。" bodyClass="inner-page blog-list-page">
   <NavBar compact />
-  <main class="page-frame">
-    <section class="page-hero glass-panel">
-      <p class="eyebrow">BLOG / NOTES</p>
-      <h1>慢慢写下来的东西</h1>
-      <p>技术折腾、项目复盘、博客搭建和一点日常记录。迁移自旧版 Firefly 博客的文章会继续在这里更新。</p>
-    </section>
+  <main class="page-frame blog-frame">
+    <section class="blog-board" aria-label="Aria7-Blog 文章归档">
+      <div class="blog-main-column">
+        <section class="blog-tags glass-panel" aria-label="主题筛选" data-blog-filter>
+          <div class="blog-tags__list">
+            <button class="blog-tag-filter is-active blog-tag-filter--home" type="button" data-blog-topic-filter="all" aria-pressed="true">
+              <House size={19} aria-hidden="true" />
+              <span>归档</span>
+              <strong>{posts.length}</strong>
+            </button>
+            {topics.map(([topic, count]) => (
+              <button class="blog-tag-filter" type="button" data-blog-topic-filter={topic} aria-pressed="false">
+                <span>{topic}</span>
+                <strong>{count}</strong>
+              </button>
+            ))}
+          </div>
+        </section>
 
-    <section class="post-grid" aria-label="文章列表">
-      {
-        posts.map((post) => (
-          <article class="post-card glass-panel">
-            <a href={`/blog/${post.id}/`} aria-label={`阅读 ${post.data.title}`}>
-              {
-                post.data.cover && (
-                  <img class="post-card__cover" src={post.data.cover} alt="" loading="lazy" decoding="async" />
-                )
-              }
-              <div class="post-card__meta">
-                <time datetime={post.data.pubDate.toISOString()}>{dateFormatter.format(post.data.pubDate)}</time>
-                {post.data.category && <span>{post.data.category}</span>}
-              </div>
-              <h2>{post.data.title}</h2>
-              <p>{post.data.description}</p>
-              <div class="tag-row">
-                {post.data.tags.map((tag) => (
-                  <span>{tag}</span>
-                ))}
-              </div>
-            </a>
-          </article>
-        ))
-      }
+        <section class="post-grid" aria-label="文章列表" data-post-grid>
+          {
+            postEntries.map(({ post, topic }) => (
+              <article class={`post-card glass-panel ${post.data.cover ? "post-card--with-preview" : ""}`} data-post-card data-post-category={topic}>
+                <a href={`/blog/${post.id}/`} aria-label={`阅读 ${post.data.title}`}>
+                  <div class="post-card__content">
+                    <span class="post-card__marker" aria-hidden="true"></span>
+                    <h2>{post.data.title}</h2>
+                    <div class="post-card__meta">
+                      <span>
+                        <CalendarDays size={18} aria-hidden="true" />
+                        <time datetime={post.data.pubDate.toISOString()}>{dateFormatter.format(post.data.pubDate)}</time>
+                      </span>
+                      <span>
+                        <BookOpen size={18} aria-hidden="true" />
+                        {topic}
+                      </span>
+                    </div>
+                    <p>{post.data.description}</p>
+                    <div class="tag-row">
+                      {post.data.tags.map((tag) => (
+                        <span>#{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {
+                    post.data.cover ? (
+                      <figure class="post-card__preview" aria-hidden="true">
+                        <img src={post.data.cover} alt="" loading="lazy" decoding="async" />
+                        <span><ChevronRight size={28} /></span>
+                      </figure>
+                    ) : (
+                      <div class="post-card__rail" aria-hidden="true">
+                        <ChevronRight size={34} />
+                      </div>
+                    )
+                  }
+                </a>
+              </article>
+            ))
+          }
+        </section>
+      </div>
+
+      <aside class="blog-side-column" aria-label="博客侧边信息">
+        <section class="blog-stat-card glass-panel" aria-label="站点统计">
+          <h2>站点统计</h2>
+          <dl class="blog-stat-list">
+            <div>
+              <dt><FileText size={19} aria-hidden="true" />文章</dt>
+              <dd>{posts.length.toLocaleString("zh-CN")}</dd>
+            </div>
+            <div>
+              <dt><Folder size={19} aria-hidden="true" />分类</dt>
+              <dd>{topicCounts.size.toLocaleString("zh-CN")}</dd>
+            </div>
+            <div>
+              <dt><Tags size={19} aria-hidden="true" />标签</dt>
+              <dd>{uniqueTags.size.toLocaleString("zh-CN")}</dd>
+            </div>
+            <div>
+              <dt><BookOpen size={19} aria-hidden="true" />总字数</dt>
+              <dd>{totalWords.toLocaleString("zh-CN")}</dd>
+            </div>
+            <div>
+              <dt><Clock3 size={19} aria-hidden="true" />运行时长</dt>
+              <dd>{runtimeDays.toLocaleString("zh-CN")} 天</dd>
+            </div>
+            <div>
+              <dt><Activity size={19} aria-hidden="true" />最后活动</dt>
+              <dd>{latestActivityText}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="blog-calendar glass-panel" aria-label="文章日历">
+          <header class="blog-calendar__header">
+            <button type="button" aria-label="上个月" disabled><ChevronLeft size={18} /></button>
+            <h2>{calendarTitle}</h2>
+            <button type="button" aria-label="下个月" disabled><ChevronRight size={18} /></button>
+          </header>
+          <div class="blog-calendar__weekdays" aria-hidden="true">
+            {weekdayLabels.map((label) => <span>{label}</span>)}
+          </div>
+          <div class="blog-calendar__grid">
+            {calendarCells.map((cell) => (
+              cell.day ? (
+                <time
+                  class:list={[
+                    "blog-calendar__day",
+                    { "is-today": cell.isToday, "has-post": cell.hasPost },
+                  ]}
+                  datetime={cell.key}
+                >
+                  {cell.day}
+                </time>
+              ) : (
+                <span class="blog-calendar__blank" aria-hidden="true"></span>
+              )
+            ))}
+          </div>
+        </section>
+      </aside>
     </section>
   </main>
 </BaseLayout>
