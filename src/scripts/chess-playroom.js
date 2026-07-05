@@ -1,9 +1,14 @@
 import { Chess } from "chess.js";
 
-const initChessPlayroom = () => {
+export const initChessPlayroom = () => {
   const room = document.querySelector("[data-chess-room]");
   if (!room) return;
+  if (room.dataset.chessReady === "true") return;
+  room.dataset.chessReady = "true";
 
+  const startButton = room.querySelector("[data-chess-start-button]");
+  const drawerToggle = room.querySelector("[data-chess-drawer-toggle]");
+  const panelNode = room.querySelector("[data-chess-panel]");
   const boardNode = room.querySelector("[data-chess-board]");
   const statusNode = room.querySelector("[data-chess-status]");
   const tipNode = room.querySelector("[data-chess-tip]");
@@ -12,8 +17,17 @@ const initChessPlayroom = () => {
   const undoButton = room.querySelector("[data-chess-undo]");
   const flipButton = room.querySelector("[data-chess-flip]");
   const aiToggle = room.querySelector("[data-chess-ai]");
+  const difficultyNodes = [...room.querySelectorAll("[data-chess-difficulty]")];
+  const difficultyGroup = room.querySelector(".chess-difficulty");
   const capturedWhiteNode = room.querySelector("[data-chess-captured-white]");
   const capturedBlackNode = room.querySelector("[data-chess-captured-black]");
+  const timerNode = room.querySelector("[data-chess-timer]");
+  const resultNode = room.querySelector("[data-chess-result]");
+  const resultBadgeNode = room.querySelector("[data-chess-result-badge]");
+  const resultTitleNode = room.querySelector("[data-chess-result-title]");
+  const resultDetailNode = room.querySelector("[data-chess-result-detail]");
+  const resultNewButton = room.querySelector("[data-chess-result-new]");
+  const resultCloseButton = room.querySelector("[data-chess-result-close]");
 
   if (!boardNode || !statusNode || !tipNode || !logNode) return;
 
@@ -42,6 +56,22 @@ const initChessPlayroom = () => {
   let flipped = false;
   let aiThinking = false;
   let aiTurnToken = 0;
+  let hasStarted = false;
+  let drawerCloseTimer = 0;
+  let hiddenLandingSquare = "";
+  let timerStartedAt = 0;
+  let timerElapsedMs = 0;
+  let timerTickId = 0;
+  let isDisposed = false;
+
+  const pieceValues = {
+    p: 1,
+    n: 3,
+    b: 3,
+    r: 5,
+    q: 9,
+    k: 0,
+  };
 
   const getSquareOrder = () => {
     const fileOrder = flipped ? [...files].reverse() : files;
@@ -51,9 +81,123 @@ const initChessPlayroom = () => {
 
   const getPieceAt = (square) => game.get(square);
   const describeTurn = () => (game.turn() === "w" ? "白方" : "黑方");
+  const describeWinner = () => (game.turn() === "w" ? "黑方" : "白方");
+  const getDifficulty = () => difficultyNodes.find((node) => node.checked)?.value || "soft";
+  const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const formatTimer = (milliseconds) => {
+    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+    const seconds = String(totalSeconds % 60).padStart(2, "0");
+    return `${minutes}:${seconds}`;
+  };
+
+  const syncTimer = () => {
+    if (!timerNode) return;
+    const elapsed = timerStartedAt ? timerElapsedMs + Date.now() - timerStartedAt : timerElapsedMs;
+    timerNode.textContent = formatTimer(elapsed);
+  };
+
+  const stopTimer = () => {
+    if (timerTickId) window.clearInterval(timerTickId);
+    timerTickId = 0;
+    if (timerStartedAt) {
+      timerElapsedMs += Date.now() - timerStartedAt;
+      timerStartedAt = 0;
+    }
+    syncTimer();
+  };
+
+  const startTimer = () => {
+    stopTimer();
+    timerElapsedMs = 0;
+    timerStartedAt = Date.now();
+    syncTimer();
+    timerTickId = window.setInterval(syncTimer, 1000);
+  };
+
+  const resumeTimer = () => {
+    if (timerStartedAt || game.isGameOver()) return;
+    timerStartedAt = Date.now();
+    timerTickId = window.setInterval(syncTimer, 1000);
+  };
+
+  const getGameResult = () => {
+    if (game.isCheckmate()) {
+      const winner = describeWinner();
+      return {
+        badge: "CHECKMATE",
+        title: "将死，棋局结束",
+        detail: `${winner}获胜。可以再来一局，或者悔一步看看有没有别的走法。`,
+      };
+    }
+
+    if (game.isStalemate()) {
+      return {
+        badge: "STALEMATE",
+        title: "逼和",
+        detail: `${describeTurn()}没有合法走法，但国王没有被将军，本局判和。`,
+      };
+    }
+
+    if (game.isThreefoldRepetition()) {
+      return {
+        badge: "REPETITION",
+        title: "三次重复，判和",
+        detail: "同一局面出现了三次，本局按三次重复规则判和。",
+      };
+    }
+
+    if (game.isInsufficientMaterial()) {
+      return {
+        badge: "DRAW",
+        title: "子力不足，判和",
+        detail: "棋盘上的棋子已经不足以形成将死，本局没有胜负。",
+      };
+    }
+
+    if (game.isDrawByFiftyMoves()) {
+      return {
+        badge: "50 MOVES",
+        title: "50 步规则，判和",
+        detail: "连续 50 回合没有吃子或兵的移动，本局按规则判和。",
+      };
+    }
+
+    if (game.isDraw()) {
+      return {
+        badge: "DRAW",
+        title: "和棋",
+        detail: "本局没有胜负。可以再来一局，或者悔一步继续研究。",
+      };
+    }
+
+    return null;
+  };
+
+  const hideResult = () => {
+    if (!resultNode) return;
+    resultNode.classList.remove("is-visible");
+    window.setTimeout(() => {
+      if (!resultNode.classList.contains("is-visible")) resultNode.hidden = true;
+    }, 220);
+  };
+
+  const showResult = () => {
+    const result = getGameResult();
+    if (!result || !resultNode) return;
+    resultBadgeNode.textContent = result.badge;
+    resultTitleNode.textContent = result.title;
+    resultDetailNode.textContent = result.detail;
+    resultNode.hidden = false;
+    // 连续结束或重开后再次结束时，强制重播轻量入场动画。
+    resultNode.classList.remove("is-visible");
+    void resultNode.offsetWidth;
+    resultNode.classList.add("is-visible");
+  };
 
   const syncCaptured = () => {
-    const fallback = "还没有小棋子掉进口袋";
+    const fallback = "暂无吃子";
     capturedWhiteNode.textContent = captured.w.length ? captured.w.map((piece) => pieceMarks[`b${piece}`]).join(" ") : fallback;
     capturedBlackNode.textContent = captured.b.length ? captured.b.map((piece) => pieceMarks[`w${piece}`]).join(" ") : fallback;
   };
@@ -64,7 +208,7 @@ const initChessPlayroom = () => {
     if (!history.length) {
       const empty = document.createElement("span");
       empty.className = "chess-move-log__empty";
-      empty.textContent = "棋谱会在这里慢慢写下来。";
+      empty.textContent = "暂无走法记录。";
       logNode.append(empty);
       return;
     }
@@ -85,6 +229,12 @@ const initChessPlayroom = () => {
   };
 
   const syncStatus = (move) => {
+    if (!hasStarted) {
+      statusNode.textContent = "准备好开始国际象棋了吗？";
+      tipNode.textContent = "选择难度后，点击开始对局。";
+      return;
+    }
+
     if (game.isCheckmate()) {
       statusNode.textContent = `${describeTurn()}被将死，棋局结束。`;
       tipNode.textContent = "可以新开一局，或者悔一步看另一条路线。";
@@ -92,19 +242,152 @@ const initChessPlayroom = () => {
     }
 
     if (game.isDraw()) {
-      statusNode.textContent = "棋局和棋。";
-      tipNode.textContent = "棋盘悄悄进入了平衡态。";
+      const result = getGameResult();
+      statusNode.textContent = result?.title || "棋局和棋。";
+      tipNode.textContent = result?.detail || "本局没有胜负。";
       return;
     }
 
     const checkText = game.isCheck() ? "，正在被将军" : "";
     statusNode.textContent = `${describeTurn()}行动${checkText}。`;
-    tipNode.textContent = move ? `${move.color === "w" ? "白方" : "黑方"}走了 ${move.san}。` : "点一下棋子，再点高亮格子。";
+    tipNode.textContent = move ? `${move.color === "w" ? "白方" : "黑方"}走了 ${move.san}。` : "选中棋子后，可落子的位置会发光。";
   };
 
   const clearSelection = () => {
     selectedSquare = "";
     legalTargets = [];
+  };
+
+  const lockSetupControls = () => {
+    aiToggle.disabled = true;
+    difficultyGroup.disabled = true;
+    panelNode?.classList.add("is-setup-locked");
+    aiToggle.closest(".chess-toggle")?.setAttribute("aria-disabled", "true");
+  };
+
+  const setDrawerPinned = (isPinned) => {
+    room.classList.toggle("is-drawer-pinned", isPinned);
+    drawerToggle?.setAttribute("aria-expanded", String(isPinned));
+  };
+
+  const setDrawerHovered = (isHovered) => {
+    window.clearTimeout(drawerCloseTimer);
+    room.classList.toggle("is-drawer-hovered", isHovered);
+  };
+
+  const scheduleDrawerClose = () => {
+    window.clearTimeout(drawerCloseTimer);
+    drawerCloseTimer = window.setTimeout(() => {
+      room.classList.remove("is-drawer-hovered");
+      if (!room.classList.contains("is-drawer-pinned")) {
+        drawerToggle?.setAttribute("aria-expanded", "false");
+      }
+    }, 120);
+  };
+
+  const syncDrawerByPointer = (event) => {
+    if (!hasStarted || room.classList.contains("is-drawer-pinned")) return;
+    const panelRect = panelNode?.getBoundingClientRect();
+    if (!panelRect) return;
+
+    const isNearBookmark = event.clientX >= window.innerWidth - 86;
+    const isInsideDrawer = event.clientX >= panelRect.left && event.clientX <= panelRect.right && event.clientY >= panelRect.top && event.clientY <= panelRect.bottom;
+
+    if (isNearBookmark || isInsideDrawer) {
+      setDrawerHovered(true);
+      return;
+    }
+
+    if (room.classList.contains("is-drawer-hovered")) {
+      scheduleDrawerClose();
+    }
+  };
+
+  const resetGame = () => {
+    game.reset();
+    captured.w = [];
+    captured.b = [];
+    lastMove = null;
+    aiThinking = false;
+    aiTurnToken += 1;
+    startTimer();
+    clearSelection();
+    syncCaptured();
+    syncMoveLog();
+    syncStatus();
+    hideResult();
+    renderBoard();
+  };
+
+  const getSquareNode = (square) => boardNode.querySelector(`[data-square="${square}"]`);
+
+  const createPieceFxClone = (pieceNode, squareNode, className) => {
+    if (!pieceNode || !squareNode) return null;
+    const squareRect = squareNode.getBoundingClientRect();
+    const clone = pieceNode.cloneNode(true);
+    clone.className = `${pieceNode.className} chess-piece-fx ${className}`;
+    clone.setAttribute("aria-hidden", "true");
+    clone.style.setProperty("--fx-left", `${squareRect.left}px`);
+    clone.style.setProperty("--fx-top", `${squareRect.top}px`);
+    clone.style.setProperty("--fx-size", `${squareRect.width}px`);
+    document.body.append(clone);
+    return clone;
+  };
+
+  const prepareMoveFx = (moveInput) => {
+    if (prefersReducedMotion() || !moveInput?.from || !moveInput?.to) return null;
+
+    const fromSquareNode = getSquareNode(moveInput.from);
+    const toSquareNode = getSquareNode(moveInput.to);
+    const movingPieceNode = fromSquareNode?.querySelector(".chess-piece");
+    if (!fromSquareNode || !toSquareNode || !movingPieceNode) return null;
+
+    const fromRect = fromSquareNode.getBoundingClientRect();
+    const toRect = toSquareNode.getBoundingClientRect();
+    const movingClone = createPieceFxClone(movingPieceNode, fromSquareNode, "chess-piece-fx--move");
+    const capturedClone = createPieceFxClone(toSquareNode.querySelector(".chess-piece"), toSquareNode, "chess-piece-fx--capture");
+    const captureDirection = moveInput.to.charCodeAt(0) >= moveInput.from.charCodeAt(0) ? 1 : -1;
+
+    movingClone?.style.setProperty("--move-x", `${toRect.left - fromRect.left}px`);
+    movingClone?.style.setProperty("--move-y", `${toRect.top - fromRect.top}px`);
+    capturedClone?.style.setProperty("--capture-x", `${captureDirection * (34 + Math.random() * 20)}px`);
+    capturedClone?.style.setProperty("--capture-rotate", `${captureDirection * (22 + Math.random() * 18)}deg`);
+
+    return { capturedClone, movingClone, to: moveInput.to };
+  };
+
+  const playMoveFx = (fx) => {
+    if (!fx) return;
+    const finish = () => {
+      fx.movingClone?.remove();
+      fx.capturedClone?.remove();
+      if (hiddenLandingSquare === fx.to) {
+        hiddenLandingSquare = "";
+        getSquareNode(fx.to)?.classList.remove("is-landing-hidden");
+      }
+    };
+    window.setTimeout(finish, 860);
+  };
+
+  const animateLegalTargets = (originSquare) => {
+    if (prefersReducedMotion()) return;
+    const originNode = getSquareNode(originSquare);
+    if (!originNode) return;
+    const originRect = originNode.getBoundingClientRect();
+    const originCenterX = originRect.left + originRect.width / 2;
+    const originCenterY = originRect.top + originRect.height / 2;
+
+    legalTargets.forEach((move, index) => {
+      const targetNode = getSquareNode(move.to);
+      if (!targetNode) return;
+      const targetRect = targetNode.getBoundingClientRect();
+      const targetCenterX = targetRect.left + targetRect.width / 2;
+      const targetCenterY = targetRect.top + targetRect.height / 2;
+      targetNode.style.setProperty("--target-dx", `${originCenterX - targetCenterX}px`);
+      targetNode.style.setProperty("--target-dy", `${originCenterY - targetCenterY}px`);
+      targetNode.style.setProperty("--target-delay", `${Math.min(index * 26, 180)}ms`);
+      targetNode.classList.add("is-target-ripple");
+    });
   };
 
   const renderBoard = () => {
@@ -128,6 +411,7 @@ const initChessPlayroom = () => {
       if (selectedSquare === square) tile.classList.add("is-selected");
       if (targetSet.has(square)) tile.classList.add(getPieceAt(square) ? "is-capture-target" : "is-move-target");
       if (lastMove && (lastMove.from === square || lastMove.to === square)) tile.classList.add("is-last-move");
+      if (hiddenLandingSquare === square) tile.classList.add("is-landing-hidden");
 
       if (piece) {
         const mark = document.createElement("span");
@@ -152,19 +436,31 @@ const initChessPlayroom = () => {
     legalTargets = game.moves({ square, verbose: true });
     tipNode.textContent = legalTargets.length ? `${square} 有 ${legalTargets.length} 个合法落点。` : "这个棋子暂时不能动。";
     renderBoard();
+    animateLegalTargets(square);
   };
 
   const applyMove = (moveInput, source = "player") => {
+    const moveFx = prepareMoveFx(moveInput);
     const move = game.move(moveInput);
-    if (!move) return false;
+    if (!move) {
+      moveFx?.movingClone?.remove();
+      moveFx?.capturedClone?.remove();
+      return false;
+    }
 
     if (move.captured) captured[move.color].push(move.captured);
     lastMove = move;
     clearSelection();
+    hiddenLandingSquare = moveFx?.to || "";
     syncCaptured();
     syncMoveLog();
     syncStatus(move);
     renderBoard();
+    playMoveFx(moveFx);
+    if (game.isGameOver()) {
+      stopTimer();
+      showResult();
+    }
 
     if (source === "player") {
       room.classList.remove("is-thinking");
@@ -174,27 +470,65 @@ const initChessPlayroom = () => {
     return true;
   };
 
+  const scoreMove = (move) => {
+    let score = Math.random() * 0.45;
+    if (move.captured) score += pieceValues[move.captured] * 2.2;
+    if (move.promotion) score += pieceValues[move.promotion] * 1.8;
+    if (move.san.includes("+")) score += 1.2;
+    if (move.san.includes("#")) score += 99;
+
+    // 轻量 AI 只看一层棋，不做搜索；用临时棋局评估，避免破坏当前棋谱和悔棋记录。
+    const currentFen = game.fen();
+    const previewGame = new Chess(currentFen);
+    previewGame.move({ from: move.from, to: move.to, promotion: move.promotion || "q" });
+    const replyCaptures = previewGame.moves({ verbose: true }).filter((reply) => reply.captured);
+    if (replyCaptures.length) {
+      const worstReply = Math.max(...replyCaptures.map((reply) => pieceValues[reply.captured] || 0));
+      score -= worstReply * 0.9;
+    }
+
+    const centerBonus = ["d4", "e4", "d5", "e5"].includes(move.to) ? 0.55 : 0;
+    return score + centerBonus;
+  };
+
+  const chooseAiMove = (moves) => {
+    const difficulty = getDifficulty();
+
+    if (difficulty === "soft") {
+      const captures = moves.filter((move) => move.captured);
+      const checks = moves.filter((move) => move.san.includes("+") || move.san.includes("#"));
+      const pool = checks.length ? checks : captures.length && Math.random() > 0.35 ? captures : moves;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    const rankedMoves = [...moves].sort((a, b) => scoreMove(b) - scoreMove(a));
+    if (difficulty === "normal") {
+      const candidateCount = Math.min(5, rankedMoves.length);
+      return rankedMoves[Math.floor(Math.random() * candidateCount)];
+    }
+
+    return rankedMoves[0];
+  };
+
   const makeAiMove = () => {
     if (!aiToggle.checked || aiThinking || game.isGameOver()) return;
     aiThinking = true;
     const token = ++aiTurnToken;
-    statusNode.textContent = "Aria 正在看棋盘...";
+    statusNode.textContent = "电脑正在走棋...";
     const delay = 520 + Math.random() * 460;
 
     window.setTimeout(() => {
-      if (token !== aiTurnToken) return;
+      if (isDisposed || token !== aiTurnToken) return;
       const moves = game.moves({ verbose: true });
       if (moves.length) {
-        const captures = moves.filter((move) => move.captured);
-        const checks = moves.filter((move) => move.san.includes("+") || move.san.includes("#"));
-        const pool = checks.length ? checks : captures.length && Math.random() > 0.35 ? captures : moves;
-        applyMove(pool[Math.floor(Math.random() * pool.length)], "aria");
+        applyMove(chooseAiMove(moves), "aria");
       }
       aiThinking = false;
     }, delay);
   };
 
   boardNode.addEventListener("click", (event) => {
+    if (!hasStarted) return;
     if (aiThinking || game.isGameOver()) return;
     const tile = event.target.closest("[data-square]");
     if (!tile) return;
@@ -221,18 +555,64 @@ const initChessPlayroom = () => {
     selectSquare(square);
   });
 
+  startButton?.addEventListener("click", () => {
+    hasStarted = true;
+    room.classList.add("is-game-started");
+    lockSetupControls();
+    setDrawerPinned(false);
+    resetGame();
+    boardNode.focus({ preventScroll: true });
+  });
+
+  drawerToggle?.addEventListener("click", () => {
+    if (!hasStarted) return;
+    setDrawerPinned(!room.classList.contains("is-drawer-pinned"));
+  });
+
+  [drawerToggle, panelNode].forEach((node) => {
+    node?.addEventListener("pointerenter", () => {
+      if (!hasStarted) return;
+      setDrawerHovered(true);
+    });
+
+    node?.addEventListener("mouseenter", () => {
+      if (!hasStarted) return;
+      setDrawerHovered(true);
+    });
+  });
+
+  panelNode?.addEventListener("pointerleave", () => {
+    if (!hasStarted) return;
+    scheduleDrawerClose();
+  });
+
+  panelNode?.addEventListener("mouseleave", () => {
+    if (!hasStarted) return;
+    scheduleDrawerClose();
+  });
+
+  window.addEventListener("pointermove", syncDrawerByPointer, { passive: true });
+  window.addEventListener("mousemove", syncDrawerByPointer, { passive: true });
+  document.addEventListener(
+    "astro:before-swap",
+    () => {
+      isDisposed = true;
+      aiTurnToken += 1;
+      window.clearInterval(timerTickId);
+      window.clearTimeout(drawerCloseTimer);
+      window.removeEventListener("pointermove", syncDrawerByPointer);
+      window.removeEventListener("mousemove", syncDrawerByPointer);
+    },
+    { once: true },
+  );
+
   newButton?.addEventListener("click", () => {
-    game.reset();
-    captured.w = [];
-    captured.b = [];
-    lastMove = null;
-    aiThinking = false;
-    aiTurnToken += 1;
-    clearSelection();
-    syncCaptured();
-    syncMoveLog();
-    syncStatus();
-    renderBoard();
+    if (!hasStarted) {
+      hasStarted = true;
+      room.classList.add("is-game-started");
+      lockSetupControls();
+    }
+    resetGame();
   });
 
   undoButton?.addEventListener("click", () => {
@@ -250,7 +630,17 @@ const initChessPlayroom = () => {
     syncCaptured();
     syncMoveLog();
     syncStatus(lastMove);
+    hideResult();
+    resumeTimer();
     renderBoard();
+  });
+
+  resultNewButton?.addEventListener("click", () => {
+    resetGame();
+  });
+
+  resultCloseButton?.addEventListener("click", () => {
+    hideResult();
   });
 
   flipButton?.addEventListener("click", () => {
@@ -261,6 +651,7 @@ const initChessPlayroom = () => {
   syncCaptured();
   syncMoveLog();
   syncStatus();
+  syncTimer();
   renderBoard();
 };
 

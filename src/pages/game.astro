@@ -3,19 +3,32 @@ import NavBar from "../components/NavBar.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 ---
 
-<BaseLayout title="Chess Playroom" description="Aria-7th Lab 的柔和国际象棋小房间。" bodyClass="inner-page chess-page">
+<BaseLayout title="Aria Chess" description="Aria-7th Lab 的国际象棋页面。" bodyClass="inner-page chess-page">
   <NavBar compact />
   <main class="page-frame">
-    <section class="page-hero glass-panel chess-hero">
-      <p class="eyebrow">GAME / CHESS PLAYROOM</p>
-      <h1>Aria Chess Room</h1>
-      <p>
-        一个轻量的国际象棋小房间。规则由 chess.js 处理，页面只保留柔和的视觉、落子提示和一点像桌面小玩具的反馈。
-      </p>
-    </section>
+    <section class="chess-room" data-chess-room>
+      <div class="chess-start" data-chess-start>
+        <p class="eyebrow">aria@chess:~$ ready</p>
+        <h1>Aria Chess</h1>
+        <div class="chess-start__chips" aria-label="棋局功能">
+          <span>白方先行</span>
+          <span>三档难度</span>
+          <span>可悔一步</span>
+        </div>
+        <div class="chess-start__terminal glass-panel" aria-label="国际象棋启动命令">
+          <span>A7</span>
+          <code>aria@chess:~$ start --white</code>
+          <button class="primary-button chess-start__button" type="button" data-chess-start-button>
+            开始对局
+          </button>
+        </div>
+      </div>
 
-    <section class="chess-room glass-panel" data-chess-room>
       <div class="chess-room__main">
+        <aside class="chess-timer-card" aria-label="棋局时间">
+          <span>TIME</span>
+          <strong data-chess-timer>00:00</strong>
+        </aside>
         <div class="chess-board-shell">
           <div class="chess-board__labels chess-board__labels--files" aria-hidden="true">
             <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span>
@@ -24,45 +37,81 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           <div class="chess-board__labels chess-board__labels--ranks" aria-hidden="true">
             <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
           </div>
+          <div class="chess-result-card" data-chess-result hidden role="status" aria-live="polite">
+            <span data-chess-result-badge>棋局结束</span>
+            <strong data-chess-result-title>本局结束</strong>
+            <p data-chess-result-detail>可以再来一局，或者悔一步复盘。</p>
+            <div class="chess-result-card__actions">
+              <button class="primary-button" type="button" data-chess-result-new>再来一局</button>
+              <button type="button" data-chess-result-close>先收起</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <aside class="chess-panel" aria-label="棋局控制台">
-        <div class="chess-panel__card">
-          <span class="chess-panel__kicker">ARIA BOARD</span>
-          <strong data-chess-status>白方先行。点一下棋子，再点目标格。</strong>
-          <p data-chess-tip>提示：高亮的小圆点是当前棋子的合法落点。</p>
-        </div>
+      <aside class="chess-panel" aria-label="棋局控制台" data-chess-panel>
+        <span class="chess-panel__hover-zone" aria-hidden="true"></span>
+        <button
+          class="chess-panel__bookmark"
+          type="button"
+          aria-controls="aria-chess-drawer"
+          aria-expanded="false"
+          data-chess-drawer-toggle
+        >
+          <span>棋局设置</span>
+          <small>ARIA</small>
+        </button>
 
-        <div class="chess-panel__actions" aria-label="棋局操作">
-          <button class="primary-button" type="button" data-chess-new>新开一局</button>
-          <button type="button" data-chess-undo>悔一步</button>
-          <button type="button" data-chess-flip>翻转棋盘</button>
-        </div>
-
-        <label class="chess-toggle">
-          <input type="checkbox" data-chess-ai checked />
-          <span>让 Aria 随机应一手</span>
-        </label>
-
-        <div class="chess-captured" aria-label="被吃掉的棋子">
-          <div>
-            <span>白方收集</span>
-            <strong data-chess-captured-white>还没有小棋子掉进口袋</strong>
+        <div class="chess-panel__drawer" id="aria-chess-drawer">
+          <div class="chess-panel__card">
+            <span class="chess-panel__kicker">棋局设置</span>
+            <strong data-chess-status>准备好开始国际象棋了吗？</strong>
+            <p data-chess-tip>选择难度后，点击开始对局。</p>
           </div>
-          <div>
-            <span>黑方收集</span>
-            <strong data-chess-captured-black>还没有小棋子掉进口袋</strong>
-          </div>
-        </div>
 
-        <div class="chess-move-log" aria-label="走子记录" data-chess-log>
-          <span class="chess-move-log__empty">棋谱会在这里慢慢写下来。</span>
+          <label class="chess-toggle">
+            <input type="checkbox" data-chess-ai checked />
+            <span>电脑执黑</span>
+          </label>
+
+          <fieldset class="chess-difficulty" aria-label="国际象棋难度">
+            <legend>难度选择</legend>
+            <label>
+              <input type="radio" name="chess-difficulty" value="soft" checked data-chess-difficulty />
+              <span>简单</span>
+            </label>
+            <label>
+              <input type="radio" name="chess-difficulty" value="normal" data-chess-difficulty />
+              <span>普通</span>
+            </label>
+            <label>
+              <input type="radio" name="chess-difficulty" value="hard" data-chess-difficulty />
+              <span>稍难</span>
+            </label>
+          </fieldset>
+
+          <div class="chess-panel__actions" aria-label="棋局操作">
+            <button class="primary-button" type="button" data-chess-new>新开一局</button>
+            <button type="button" data-chess-undo>悔一步</button>
+            <button type="button" data-chess-flip>翻转棋盘</button>
+          </div>
+
+          <div class="chess-captured" aria-label="被吃掉的棋子">
+            <div>
+              <span>白方吃子</span>
+              <strong data-chess-captured-white>暂无吃子</strong>
+            </div>
+            <div>
+              <span>黑方吃子</span>
+              <strong data-chess-captured-black>暂无吃子</strong>
+            </div>
+          </div>
+
+          <div class="chess-move-log" aria-label="走子记录" data-chess-log>
+            <span class="chess-move-log__empty">暂无走法记录。</span>
+          </div>
         </div>
       </aside>
     </section>
   </main>
-  <script>
-    import "../scripts/chess-playroom.js";
-  </script>
 </BaseLayout>
