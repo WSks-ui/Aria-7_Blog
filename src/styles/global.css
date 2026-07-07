@@ -6785,3 +6785,106 @@ a.personal-tag:hover {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* =====================================================================
+ * Astro View Transitions 动画
+ * 使用 CSS View Transitions API 实现页面切换的平滑过渡
+ * - 旧页面淡出 + 轻微上移
+ * - 新页面淡入 + 轻微下移
+ * - 尊重 prefers-reduced-motion 用户偏好
+ * ===================================================================== */
+
+/* 默认过渡动画命名，供 transition:animate 指令引用 */
+@view-transition {
+  navigation: auto;
+}
+
+/* 旧页面退出动画 */
+::view-transition-old(root) {
+  animation: vt-fade-out 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* 新页面进入动画 */
+::view-transition-new(root) {
+  animation: vt-fade-in 260ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes vt-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.995);
+  }
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(1.002);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 博客文章卡片列表的独立过渡（更细腻的错落感） */
+::view-transition-old(.post-grid) {
+  animation: vt-post-out 150ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+::view-transition-new(.post-grid) {
+  animation: vt-post-in 230ms cubic-bezier(0.4, 0, 0.2, 1) 40ms both;
+}
+
+@keyframes vt-post-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes vt-post-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 降低动画偏好的用户直接关闭过渡 */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-old(.post-grid),
+  ::view-transition-new(.post-grid) {
+    animation: none !important;
+  }
+}
+
+/* =====================================================================
+ * Astro View Transitions —— 对应 transition:animate="fade" 指令
+ * ===================================================================== */
+
+::view-transition-old(fade) {
+  animation: vt-fade-out 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+::view-transition-new(fade) {
+  animation: vt-fade-in 260ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes vt-fade-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-6px) scale(0.995); }
+}
+
+@keyframes vt-fade-in {
+  from { opacity: 0; transform: translateY(8px) scale(1.002); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(fade),
+  ::view-transition-new(fade) {
+    animation: none !important;
+  }
+}

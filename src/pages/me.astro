@@ -1,11 +1,11 @@
----
+﻿---
 import NavBar from "../components/NavBar.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 ---
 
 <BaseLayout title="Me" description="Aria-7th Lab 的个人介绍。" bodyClass="inner-page">
   <NavBar compact />
-  <main class="page-frame">
+  <main class="page-frame" transition:animate="fade">
     <section class="profile-panel profile-panel--simple glass-panel">
       <div class="profile-avatar" aria-hidden="true">
         <img src="/images/aria-avatar.jpg" alt="" loading="lazy" />

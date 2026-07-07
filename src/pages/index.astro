@@ -1,4 +1,4 @@
----
+﻿---
 import Announcement from "../components/Announcement.astro";
 import HeroTerminal from "../components/HeroTerminal.astro";
 import NavBar from "../components/NavBar.astro";
@@ -7,7 +7,349 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 ---
 
 <BaseLayout title="Aria-7th Lab" bodyClass="home-page">
-  <main class="home-shell">
+  <!-- ===================================================================
+       Aria-7th Lab 欢迎画面
+       静默预加载首页图片与视频资源，就绪后自动淡出进入主页
+       上限 8 秒，用户可手动点击跳过
+       =================================================================== -->
+  <div id="aria-welcome-splash" class="aria-welcome-splash" aria-hidden="false" tabindex="0" role="button" aria-label="轻触进入主页">
+    <div class="aria-welcome-splash__glow" aria-hidden="true"></div>
+    <div class="aria-welcome-splash__stage">
+      <p class="aria-welcome-splash__subtitle">PERSONAL SCRAPBOOK / ANIME DIARY / DEV NOTES</p>
+      <h1 class="aria-welcome-splash__title">Aria-7th Lab</h1>
+      <div class="aria-welcome-splash__terminal glass-panel">
+        <div class="aria-welcome-splash__dots" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <code aria-label="Aria 终端启动信息">
+          <span class="aria-welcome-splash__prompt">aria@home:~$</span>
+          <span class="aria-welcome-splash__cmd" data-splash-cmd></span>
+          <span class="aria-welcome-splash__cursor" aria-hidden="true">&#9608;</span>
+        </code>
+        <div class="aria-welcome-splash__bar" aria-hidden="true">
+          <span data-splash-progress-bar></span>
+        </div>
+      </div>
+      <p class="aria-welcome-splash__hint">轻触任意位置，直接进入</p>
+    </div>
+    <div class="aria-welcome-splash__decor" aria-hidden="true">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Splash 样式：内联在首页，匹配 Aria-7th Lab 粉白渐变终端风格
+       =================================================================== -->
+  <style is:inline>
+    .aria-welcome-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      background:
+        radial-gradient(circle at 16% 22%, rgba(242, 154, 189, 0.26), transparent 34%),
+        radial-gradient(circle at 78% 18%, rgba(159, 216, 239, 0.22), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 245, 238, 0.98)),
+        #fbf8f5;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: opacity 420ms cubic-bezier(0.4, 0, 0.2, 1),
+                  visibility 420ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .aria-welcome-splash.is-dismissed {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* 柔和光晕，与 hero-glow 一致 */
+    .aria-welcome-splash__glow {
+      position: absolute;
+      z-index: 0;
+      width: min(720px, 74vw);
+      height: min(420px, 44vh);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0));
+      animation: aria-splash-glow 2.8s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    @keyframes aria-splash-glow {
+      from { transform: scale(0.92); opacity: 0.6; }
+      to   { transform: scale(1.08); opacity: 0.86; }
+    }
+
+    .aria-welcome-splash__stage {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(10px, 2vh, 20px);
+      text-align: center;
+      padding: 24px;
+    }
+
+    .aria-welcome-splash__subtitle {
+      margin: 0;
+      font-size: clamp(0.6rem, 1.35vw, 0.78rem);
+      font-weight: 600;
+      letter-spacing: 0.28em;
+      color: var(--muted, #73798a);
+      opacity: 0;
+      animation: aria-splash-fade-up 480ms 120ms ease-out forwards;
+    }
+
+    .aria-welcome-splash__title {
+      margin: 0;
+      font-size: clamp(3rem, 7vw, 6.8rem);
+      font-weight: 800;
+      font-family:
+        "Comic Sans MS", "Segoe Print", "Marker Felt",
+        "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+      color: #fff6fb;
+      text-shadow:
+        0 0 40px rgba(242, 154, 189, 0.42),
+        0 4px 28px rgba(159, 216, 239, 0.2);
+      letter-spacing: 0.02em;
+      opacity: 0;
+      animation: aria-splash-fade-up 540ms 200ms ease-out forwards;
+    }
+
+    @keyframes aria-splash-fade-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 终端卡片 — 复用博客 glass-panel 风格 */
+    .aria-welcome-splash__terminal {
+      max-width: 420px;
+      width: 90vw;
+      padding: 18px 22px;
+      border-radius: var(--radius-md, 16px);
+      font-size: clamp(0.78rem, 1.6vw, 0.92rem);
+      opacity: 0;
+      animation: aria-splash-fade-up 480ms 380ms ease-out forwards;
+    }
+
+    .aria-welcome-splash__dots {
+      display: flex;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .aria-welcome-splash__dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(242, 154, 189, 0.8), rgba(242, 154, 189, 0.28));
+      animation: aria-splash-dot 1.6s infinite;
+    }
+    .aria-welcome-splash__dots span:nth-child(2) { animation-delay: 0.25s; }
+    .aria-welcome-splash__dots span:nth-child(3) { animation-delay: 0.5s; }
+
+    @keyframes aria-splash-dot {
+      0%, 60%, 100% { opacity: 0.35; transform: scale(0.8); }
+      30% { opacity: 1; transform: scale(1.15); }
+    }
+
+    .aria-welcome-splash__terminal code {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family:
+        "Cascadia Code", "Fira Code", "JetBrains Mono",
+        "Consolas", "Courier New", monospace;
+      font-size: inherit;
+      color: var(--ink, #34394a);
+    }
+
+    .aria-welcome-splash__prompt {
+      color: var(--pink, #f29abd);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .aria-welcome-splash__cmd {
+      flex: 1;
+      text-align: left;
+      opacity: 0.72;
+    }
+
+    .aria-welcome-splash__cursor {
+      color: var(--pink, #f29abd);
+      animation: aria-splash-blink 0.9s step-end infinite;
+      font-weight: 400;
+    }
+
+    @keyframes aria-splash-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* 进度条 — 极细微，不喧宾夺主 */
+    .aria-welcome-splash__bar {
+      width: 100%;
+      height: 3px;
+      margin-top: 14px;
+      border-radius: 3px;
+      background: rgba(242, 154, 189, 0.16);
+      overflow: hidden;
+    }
+
+    .aria-welcome-splash__bar span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #f29abd, #9fd8ef, #aee6d2);
+      background-size: 200% 100%;
+      animation: aria-splash-progress-shimmer 1.6s linear infinite;
+      transition: width 260ms ease-out;
+    }
+
+    @keyframes aria-splash-progress-shimmer {
+      from { background-position: 200% 0; }
+      to   { background-position: -200% 0; }
+    }
+
+    .aria-welcome-splash__hint {
+      margin: 0;
+      font-size: 0.72rem;
+      color: var(--muted, #73798a);
+      opacity: 0.6;
+      animation: aria-splash-fade-up 480ms 520ms ease-out forwards;
+      letter-spacing: 0.08em;
+    }
+
+    /* 装饰性浮动元素 */
+    .aria-welcome-splash__decor {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .aria-welcome-splash__decor span {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(242, 154, 189, 0.32), transparent);
+      animation: aria-splash-float 6s ease-in-out infinite;
+    }
+    .aria-welcome-splash__decor span:nth-child(1) {
+      width: 48px; height: 48px; top: 14%; left: 8%;
+      animation-delay: 0s; animation-duration: 5.2s;
+    }
+    .aria-welcome-splash__decor span:nth-child(2) {
+      width: 32px; height: 32px; top: 22%; right: 12%;
+      animation-delay: 1.2s; animation-duration: 6.4s;
+    }
+    .aria-welcome-splash__decor span:nth-child(3) {
+      width: 24px; height: 24px; bottom: 18%; left: 16%;
+      animation-delay: 2.4s; animation-duration: 5.8s;
+    }
+    .aria-welcome-splash__decor span:nth-child(4) {
+      width: 40px; height: 40px; top: 8%; left: 44%;
+      animation-delay: 0.6s; animation-duration: 7s;
+    }
+    .aria-welcome-splash__decor span:nth-child(5) {
+      width: 18px; height: 18px; bottom: 26%; right: 20%;
+      animation-delay: 1.8s; animation-duration: 5.4s;
+    }
+    .aria-welcome-splash__decor span:nth-child(6) {
+      width: 28px; height: 28px; top: 42%; right: 6%;
+      animation-delay: 3s; animation-duration: 6.2s;
+    }
+
+    @keyframes aria-splash-float {
+      0%, 100% { transform: translateY(0) scale(1); opacity: 0.42; }
+      50% { transform: translateY(-18px) scale(1.14); opacity: 0.72; }
+    }
+
+    /* 低动画偏好：缩短过渡，不播放浮动 */
+    @media (prefers-reduced-motion: reduce) {
+      .aria-welcome-splash__glow,
+      .aria-welcome-splash__decor span {
+        animation: none;
+      }
+      .aria-welcome-splash {
+        transition: opacity 120ms linear, visibility 120ms linear;
+      }
+    }
+  </style>
+
+  <!-- ===================================================================
+     Splash 脚本：简单可靠的欢迎画面退出逻辑
+     - 图片加载完毕自动淡出（上限 8 秒兜底）
+     - 点击任意位置立即淡出
+     =================================================================== -->
+  <script is:inline>
+    (function () {
+      var splash = document.getElementById("aria-welcome-splash");
+      if (!splash) return;
+
+      var done = false;
+      var startTime = Date.now();
+      var MIN_SHOW_MS = 1800; // 最短显示 1.8 秒，确保用户能看见
+
+      function go() {
+        if (done) return;
+        done = true;
+        splash.classList.add("is-dismissed");
+        setTimeout(function () { splash.remove(); }, 500);
+      }
+
+      // 检查是否可以退出的条件
+      function tryGo(loaded) {
+        var elapsed = Date.now() - startTime;
+        // 必须同时满足：图片加载完 AND 已显示足够时间
+        if (loaded && elapsed >= MIN_SHOW_MS) {
+          go();
+        }
+      }
+
+      // 超时兜底 8 秒
+      setTimeout(go, 8000);
+
+      // 点击任意位置立刻退出（无视最短时间限制）
+      splash.addEventListener("click", go, { once: true });
+
+      // 预加载关键图片
+      var list = ["/images/aria-avatar.jpg", "/images/aria-bg-poster.webp"];
+      var left = list.length;
+      var allLoaded = false;
+
+      function oneDone() {
+        left -= 1;
+        if (left <= 0) {
+          allLoaded = true;
+          tryGo(true);
+        }
+      }
+
+      list.forEach(function (url) {
+        var img = new Image();
+        img.onload = oneDone;
+        img.onerror = oneDone;
+        img.src = url;
+      });
+
+      // 如果图片加载极快（缓存命中），等最短时间到了再退出
+      if (allLoaded) tryGo(true);
+      // 兜底：最短时间到达时再检查一次
+      setTimeout(function () { tryGo(allLoaded); }, MIN_SHOW_MS);
+    })();
+  </script>
+
+  <main class="home-shell" transition:animate="fade">
     <NavBar showBrand={false} />
     <Announcement />
     <SakuraLayer />
@@ -36,7 +378,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             muted
             loop
             playsinline
-            preload="metadata"
+            preload="none"
             poster="/images/aria-bg-poster.webp"
             aria-hidden="true"
           >

@@ -1,4 +1,4 @@
----
+﻿---
 import { getCollection } from "astro:content";
 import {
   Activity,
@@ -93,7 +93,7 @@ while (calendarCells.length % 7 !== 0) {
 
 <BaseLayout title="Blog" description="Aria-7th Lab 的笔记、札记和更新。" bodyClass="inner-page blog-list-page">
   <NavBar compact />
-  <main class="page-frame blog-frame">
+  <main class="page-frame blog-frame" transition:animate="fade">
     <section class="blog-board" aria-label="Aria7-Blog 文章归档">
       <div class="blog-main-column">
         <section class="blog-tags glass-panel" aria-label="主题筛选" data-blog-filter>

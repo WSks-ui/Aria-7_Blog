@@ -1,4 +1,4 @@
----
+﻿---
 import { ExternalLink, GitBranch, GitFork, Sparkles, Star } from "@lucide/astro";
 import NavBar from "../components/NavBar.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
@@ -88,7 +88,7 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 
 <BaseLayout title="Works" description="Aria-7th Lab 的 GitHub 项目展示。" bodyClass="inner-page">
   <NavBar compact />
-  <main class="page-frame works-frame">
+  <main class="page-frame works-frame" transition:animate="fade">
     <section class="work-grid work-grid--repos" aria-label="GitHub 项目列表">
       {
         repositories.map((repo, index) => (
