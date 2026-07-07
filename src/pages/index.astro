@@ -293,7 +293,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
      =================================================================== -->
   <script is:inline>
     (function () {
-      // 客户端路由返回首页时不重复弹（全局标记跨页面持久）
       if (window.__ariaSplashSeen) return;
       window.__ariaSplashSeen = true;
 
@@ -302,7 +301,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
       var done = false;
       var startTime = Date.now();
-      var MIN_SHOW_MS = 1800; // 最短显示 1.8 秒，确保用户能看见
+      var MIN_SHOW_MS = 1800;
 
       function go() {
         if (done) return;
@@ -311,45 +310,85 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         setTimeout(function () { splash.remove(); }, 500);
       }
 
-      // 检查是否可以退出的条件
-      function tryGo(loaded) {
+      function tryGo(ready) {
         var elapsed = Date.now() - startTime;
-        // 必须同时满足：图片加载完 AND 已显示足够时间
-        if (loaded && elapsed >= MIN_SHOW_MS) {
-          go();
-        }
+        if (ready && elapsed >= MIN_SHOW_MS) go();
       }
 
-      // 超时兜底 8 秒
       setTimeout(go, 8000);
-
-      // 点击任意位置立刻退出（无视最短时间限制）
       splash.addEventListener("click", go, { once: true });
 
-      // 预加载关键图片
-      var list = ["/images/aria-avatar.jpg", "/images/aria-bg-poster.webp"];
-      var left = list.length;
-      var allLoaded = false;
+      // =============================================================
+      // 等 DOM 解析完毕后再追踪图片加载状态
+      // 原因：splash 在 <main> 之前，此时后续 <img> 还未解析
+      //      且 loading="lazy" 图片在 splash 遮盖下不会被触发
+      // =============================================================
+      function trackAllResources() {
+        var total = 0;
+        var left = 0;
+        var allReady = false;
 
-      function oneDone() {
-        left -= 1;
-        if (left <= 0) {
-          allLoaded = true;
+        function oneDone() {
+          left -= 1;
+          if (left <= 0) {
+            allReady = true;
+            tryGo(true);
+          }
+        }
+
+        // --- 页面上所有 <img>：强制 eager 加载并追踪 ---
+        var imgs = document.querySelectorAll("img");
+        for (var i = 0; i < imgs.length; i++) {
+          var img = imgs[i];
+          // 强制取消懒加载，让浏览器立即开始下载
+          if (img.loading === "lazy") img.loading = "eager";
+          if (img.complete) continue; // 已缓存/已加载
+          total += 1;
+          left += 1;
+          img.addEventListener("load", oneDone, { once: true });
+          img.addEventListener("error", oneDone, { once: true });
+        }
+
+        // --- 背景视频 ---
+        var videoSrc = window.innerWidth >= 720
+          ? "/videos/aria-bg-1080.mp4"
+          : "/videos/aria-bg-720.mp4";
+
+        total += 1;
+        left += 1;
+
+        var v = document.createElement("video");
+        v.preload = "auto";
+        v.muted = true;
+        v.style.display = "none";
+        document.body.appendChild(v);
+
+        v.addEventListener("canplay", oneDone, { once: true });
+        v.addEventListener("error", oneDone, { once: true });
+        setTimeout(function () { oneDone(); }, 5000);
+
+        var src = document.createElement("source");
+        src.src = videoSrc;
+        src.type = "video/mp4";
+        v.appendChild(src);
+        v.load();
+
+        // 没有任何需要等的资源（全部已缓存）
+        if (total === 0) {
+          allReady = true;
           tryGo(true);
         }
+
+        // 最短时间兜底
+        setTimeout(function () { tryGo(allReady); }, MIN_SHOW_MS);
       }
 
-      list.forEach(function (url) {
-        var img = new Image();
-        img.onload = oneDone;
-        img.onerror = oneDone;
-        img.src = url;
-      });
-
-      // 如果图片加载极快（缓存命中），等最短时间到了再退出
-      if (allLoaded) tryGo(true);
-      // 兜底：最短时间到达时再检查一次
-      setTimeout(function () { tryGo(allLoaded); }, MIN_SHOW_MS);
+      // 图片追踪必须等 DOM 解析完毕
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", trackAllResources);
+      } else {
+        trackAllResources();
+      }
     })();
   </script>
 
