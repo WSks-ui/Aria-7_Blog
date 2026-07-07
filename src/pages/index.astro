@@ -293,6 +293,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
      =================================================================== -->
   <script is:inline>
     (function () {
+      // 客户端路由返回首页时不重复弹（全局标记跨页面持久）
+      if (window.__ariaSplashSeen) return;
+      window.__ariaSplashSeen = true;
+
       var splash = document.getElementById("aria-welcome-splash");
       if (!splash) return;
 
