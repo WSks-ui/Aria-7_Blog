@@ -2,6 +2,37 @@
 import { ClientRouter } from "astro:transitions";
 import CustomCursor from "../components/CustomCursor.astro";
 import SideTools from "../components/SideTools.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+  bodyClass?: string;
+}
+
+const {
+  title = "Aria-7th Lab",
+  description = "第七咏叹调实验室：Aria-7 的个人剪贴簿、动漫日记与技术笔记。",
+  bodyClass = "",
+} = Astro.props;
+
+const pageTitle = title === "Aria-7th Lab" ? title : `${title} | Aria-7th Lab`;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <!-- ===================================================================
+         资源预加载提示：加速首屏关键资源和外站连接的加载
+         - preconnect：提前�---
+import { ClientRouter } from "astro:transitions";
+import CustomCursor from "../components/CustomCursor.astro";
+import SideTools
 import "../styles/global.css";
 
 interface Props {
@@ -47,6 +78,7 @@ const pageTitle = title === "Aria-7th Lab" ? title : `${title} | Aria-7th Lab`;
       <SideTools />
     </div>
     <slot />
+    <SiteFooter />
     <script>
       declare global {
         interface Window {

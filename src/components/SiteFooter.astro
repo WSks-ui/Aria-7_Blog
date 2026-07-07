@@ -1,0 +1,43 @@
+﻿---
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer" aria-label="站点页脚">
+  <p class="site-footer__line">
+    &copy; {year} Aria-7
+  </p>
+  <p class="site-footer__line">
+    Powered by <a href="https://astro.build/" target="_blank" rel="noopener noreferrer">Astro</a>
+    &amp; <a href="https://github.com/WSks-ui/Aria-7_Blog" target="_blank" rel="noopener noreferrer">Aria7_Blog</a>
+  </p>
+</footer>
+
+<style>
+  .site-footer {
+    margin: clamp(32px, 5vh, 56px) auto 0;
+    max-width: var(--page-max, 1120px);
+    padding: clamp(16px, 2.5vh, 28px) 16px clamp(20px, 3vh, 32px);
+    text-align: center;
+  }
+
+  .site-footer__line {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    color: var(--muted, #73798a);
+    line-height: 1.7;
+  }
+
+  .site-footer__line a {
+    color: var(--pink, #f29abd);
+    text-decoration: none;
+    transition: opacity 180ms;
+  }
+
+  .site-footer__line a:hover {
+    opacity: 0.7;
+  }
+</style>
