@@ -245,7 +245,9 @@
       const insidePalette = target?.closest?.("[data-command-palette]");
 
       // 首页右键作为 Spotlight 的隐藏入口；只在主页面接管，避免影响文章页代码块等原生/站内右键行为。
-      if (!isHomePage || insidePalette || editableTarget || window.__ariaSplashActive) return;
+      // 终端阶段（HeroTerminal 展开后）有自己的右键关闭逻辑，不在此处拦截，避免覆盖终端的右键行为。
+      const isTerminalOpen = document.querySelector('[data-terminal-shell].is-open, [data-terminal-shell].is-opening');
+      if (!isHomePage || insidePalette || editableTarget || window.__ariaSplashActive || isTerminalOpen) return;
 
       event.preventDefault();
       event.stopImmediatePropagation();
