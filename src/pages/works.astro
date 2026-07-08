@@ -1,5 +1,6 @@
 ﻿---
 import { ExternalLink, GitBranch, GitFork, Sparkles, Star } from "@lucide/astro";
+import SiteFooter from "../components/SiteFooter.astro";
 import NavBar from "../components/NavBar.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
@@ -121,5 +122,6 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
         ))
       }
     </section>
+    <SiteFooter />
   </main>
 </BaseLayout>

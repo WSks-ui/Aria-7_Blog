@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   color-scheme: light;
   --ink: #34394a;
   --muted: #73798a;
@@ -1643,7 +1643,8 @@ a.personal-tag:hover {
 .home-page .home-shell {
   --home-layer-split-y: 100%;
   --home-layer-progress: 0;
-  min-height: 200svh;
+  --home-footer-reveal-space: clamp(120px, 14vh, 180px);
+  min-height: calc(200svh + var(--home-footer-reveal-space));
 }
 
 .home-layer-stage {
@@ -1688,6 +1689,10 @@ a.personal-tag:hover {
   z-index: 8;
   transform: translateY(-50%);
   will-change: top;
+}
+
+.home-page.is-layer-end-hold .home-layer-stage .page-divider {
+  transition: top 160ms ease-out;
 }
 
 .home-layer-stage .home-next {
@@ -6887,4 +6892,23 @@ a.personal-tag:hover {
   ::view-transition-new(fade) {
     animation: none !important;
   }
+}
+
+/* 首页 Footer 放在额外滚动空间末端，分割线到顶后才开始浮现。 */
+.home-page .site-footer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 9;
+  max-width: none;
+  margin: 0 auto;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 248, 242, 0.82) 34%,
+    rgba(255, 248, 242, 0.96) 100%
+  );
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }

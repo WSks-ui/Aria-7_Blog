@@ -3,6 +3,7 @@ import Announcement from "../components/Announcement.astro";
 import HeroTerminal from "../components/HeroTerminal.astro";
 import NavBar from "../components/NavBar.astro";
 import SakuraLayer from "../components/SakuraLayer.astro";
+import SiteFooter from "../components/SiteFooter.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 ---
 
@@ -349,30 +350,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           img.addEventListener("error", oneDone, { once: true });
         }
 
-        // --- 背景视频 ---
-        var videoSrc = window.innerWidth >= 720
-          ? "/videos/aria-bg-1080.mp4"
-          : "/videos/aria-bg-720.mp4";
-
-        total += 1;
-        left += 1;
-
-        var v = document.createElement("video");
-        v.preload = "auto";
-        v.muted = true;
-        v.style.display = "none";
-        document.body.appendChild(v);
-
-        v.addEventListener("canplay", oneDone, { once: true });
-        v.addEventListener("error", oneDone, { once: true });
-        setTimeout(function () { oneDone(); }, 5000);
-
-        var src = document.createElement("source");
-        src.src = videoSrc;
-        src.type = "video/mp4";
-        v.appendChild(src);
-        v.load();
-
         // 没有任何需要等的资源（全部已缓存）
         if (total === 0) {
           allReady = true;
@@ -415,19 +392,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
       <section class="home-next home-layer home-layer--feed" id="lab-feed" aria-labelledby="lab-feed-title">
         <div class="home-next__inner">
-          <video
-            class="home-next__video"
-            autoplay
-            muted
-            loop
-            playsinline
-            preload="none"
-            poster="/images/aria-bg-poster.webp"
-            aria-hidden="true"
-          >
-            <source src="/videos/aria-bg-1080.mp4" type="video/mp4" media="(min-width: 720px)" />
-            <source src="/videos/aria-bg-720.mp4" type="video/mp4" />
-          </video>
+          <img class="home-next__video" src="/images/home-bg.png" alt="" loading="eager" aria-hidden="true" />
 
           <div class="personal-tags" aria-label="个人标签">
             <div class="personal-tags__brand">
@@ -461,5 +426,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         <span></span>
       </div>
     </div>
+    <SiteFooter />
   </main>
 </BaseLayout>

@@ -29,13 +29,12 @@
     let layerFrame = 0;
     let wasPastHero = document.body.classList.contains("is-past-hero");
     let navReturnTimer = 0;
+    let layerEndLockTimer = 0;
+    let layerEndLocked = false;
 
     const getLayerScrollRange = () => {
-      const documentHeight = Math.max(
-        document.documentElement.scrollHeight,
-        document.body?.scrollHeight || 0,
-      );
-      return Math.max(1, documentHeight - window.innerHeight);
+      // 首页图层揭示只使用第一屏滚动距离；footer 的额外滚动空间不参与分割线进度。
+      return Math.max(1, homeLayerStage.getBoundingClientRect().height || window.innerHeight);
     };
 
     const setPastHeroState = (nextPastHero) => {
@@ -71,6 +70,34 @@
       if (!layerFrame) layerFrame = window.requestAnimationFrame(syncHomeLayerReveal);
     };
 
+    const holdLayerEnd = () => {
+      layerEndLocked = true;
+      document.body.classList.add("is-layer-end-hold");
+      window.clearTimeout(layerEndLockTimer);
+      layerEndLockTimer = window.setTimeout(() => {
+        layerEndLocked = false;
+        document.body.classList.remove("is-layer-end-hold");
+      }, reduceMotion ? 0 : 420);
+    };
+
+    const guardLayerEndScroll = (event) => {
+      if (event.defaultPrevented || event.deltaY <= 0) return;
+      const range = getLayerScrollRange();
+      const scrollY = window.scrollY;
+      if (layerEndLocked && scrollY >= range - 2) {
+        event.preventDefault();
+        window.scrollTo({ top: range, left: 0, behavior: "auto" });
+        return;
+      }
+      // 大惯性滚动跨过 feed 完整展示点时，先固定在边界；下一次滚动再进入 footer 区域。
+      if (scrollY < range - 2 && scrollY + event.deltaY >= range) {
+        event.preventDefault();
+        window.scrollTo({ top: range, left: 0, behavior: "auto" });
+        holdLayerEnd();
+        syncHomeLayerReveal();
+      }
+    };
+
     const scrollToLayerEnd = (event) => {
       event.preventDefault();
       window.scrollTo({
@@ -93,11 +120,15 @@
     }
 
     syncHomeLayerReveal();
+    onPage(window, "wheel", guardLayerEndScroll, { passive: false });
     onPage(window, "scroll", requestHomeLayerReveal, { passive: true });
     onPage(window, "resize", syncHomeLayerReveal);
     addPageCleanup(() => {
       window.cancelAnimationFrame(layerFrame);
       window.clearTimeout(navReturnTimer);
+      window.clearTimeout(layerEndLockTimer);
+      layerEndLocked = false;
+      document.body.classList.remove("is-layer-end-hold");
     });
   }
 

@@ -1,5 +1,6 @@
 ﻿---
 import BaseLayout from "./BaseLayout.astro";
+import SiteFooter from "../components/SiteFooter.astro";
 import NavBar from "../components/NavBar.astro";
 import GiscusComments from "../components/GiscusComments.astro";
 import {
@@ -195,5 +196,6 @@ const topToc = toc.filter((item) => item.depth <= 3).slice(0, 16);
         </aside>
       </aside>
     </div>
+    <SiteFooter />
   </main>
 </BaseLayout>
