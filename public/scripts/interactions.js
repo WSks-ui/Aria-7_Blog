@@ -21,6 +21,163 @@
   onPage(document, "astro:before-swap", window.__ariaInteractionsCleanup, { once: true });
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const initHomeSplash = () => {
+    const routeSplash = document.getElementById("aria-welcome-splash");
+    if (!routeSplash) {
+      window.__ariaSplashActive = false;
+      return;
+    }
+
+    // Astro 客户端路由返回首页时会重新插入首页 DOM，但不会刷新 window；
+    // 已经看过欢迎层的同一标签页，必须直接移除新插入的 splash，避免覆盖主页。
+    if (window.__ariaSplashSeen) {
+      window.__ariaSplashActive = false;
+      routeSplash.remove();
+      return;
+    }
+
+    window.__ariaSplashSeen = true;
+    window.__ariaSplashActive = true;
+
+    let done = false;
+    const startTime = Date.now();
+    const minShowMs = 1800;
+    const maxShowMs = 8000;
+    const progressBar = routeSplash.querySelector("[data-splash-progress-bar]");
+    const commandText = routeSplash.querySelector("[data-splash-cmd]");
+
+    const setProgress = (loaded, total) => {
+      if (!progressBar) return;
+      const progress = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 100;
+      progressBar.style.width = `${progress}%`;
+    };
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      window.__ariaSplashActive = false;
+      routeSplash.classList.add("is-dismissed");
+      window.setTimeout(() => routeSplash.remove(), reduceMotion ? 140 : 500);
+    };
+
+    const tryFinish = (ready) => {
+      if (!ready || done) return;
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= minShowMs) finish();
+      else window.setTimeout(finish, minShowMs - elapsed);
+    };
+
+    const waitForImageElement = (image) => new Promise((resolve) => {
+      image.loading = "eager";
+      if ("fetchPriority" in image) image.fetchPriority = "high";
+
+      const settle = () => {
+        if (typeof image.decode === "function" && image.naturalWidth > 0) {
+          image.decode().then(resolve, resolve);
+        } else {
+          resolve();
+        }
+      };
+
+      if (image.complete) {
+        settle();
+        return;
+      }
+
+      image.addEventListener("load", settle, { once: true });
+      image.addEventListener("error", resolve, { once: true });
+    });
+
+    const waitForImageUrl = (url) => new Promise((resolve) => {
+      const image = new Image();
+      image.onload = () => {
+        if (typeof image.decode === "function") image.decode().then(resolve, resolve);
+        else resolve();
+      };
+      image.onerror = resolve;
+      image.src = url;
+    });
+
+    const collectBackgroundUrls = () => {
+      const urls = new Set();
+      const homeShell = document.querySelector(".home-shell");
+      if (!homeShell) return urls;
+
+      // 首页首屏背景是 CSS background-image，不在 <img> 列表里；这里显式纳入等待，避免进入后再逐行显示。
+      const backgroundCandidates = homeShell.querySelectorAll(".hero-section, .home-layer, .home-next, [style]");
+      backgroundCandidates.forEach((element) => {
+        const backgroundImage = window.getComputedStyle(element).backgroundImage;
+        if (!backgroundImage || backgroundImage === "none") return;
+
+        const matches = backgroundImage.matchAll(/url\(["']?([^"')]+)["']?\)/g);
+        for (const match of matches) {
+          try {
+            urls.add(new URL(match[1], window.location.href).href);
+          } catch {
+            // 忽略不可解析的 CSS url，避免个别资源破坏欢迎层退出。
+          }
+        }
+      });
+
+      return urls;
+    };
+
+    const trackHomeResources = () => {
+      const homeShell = document.querySelector(".home-shell");
+      const waits = [];
+      let loaded = 0;
+
+      if (homeShell) {
+        homeShell.querySelectorAll("img").forEach((image) => {
+          waits.push(waitForImageElement(image));
+        });
+
+        collectBackgroundUrls().forEach((url) => {
+          waits.push(waitForImageUrl(url));
+        });
+      }
+
+      const total = waits.length;
+      setProgress(0, total);
+
+      if (commandText) {
+        commandText.textContent = total > 0 ? "prepare home assets" : "open home";
+      }
+
+      if (total === 0) {
+        setProgress(1, 1);
+        tryFinish(true);
+        return;
+      }
+
+      waits.forEach((wait) => {
+        wait.finally(() => {
+          loaded += 1;
+          setProgress(loaded, total);
+        });
+      });
+
+      Promise.allSettled(waits).then(() => tryFinish(true));
+    };
+
+    const maxTimer = window.setTimeout(finish, maxShowMs);
+    addPageCleanup(() => {
+      window.clearTimeout(maxTimer);
+      window.__ariaSplashActive = false;
+    });
+    onPage(routeSplash, "click", finish, { once: true });
+    onPage(routeSplash, "keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") finish();
+    });
+
+    if (document.readyState === "loading") {
+      onPage(document, "DOMContentLoaded", trackHomeResources, { once: true });
+    } else {
+      trackHomeResources();
+    }
+  };
+
+  initHomeSplash();
 
   const homeLayerStage = document.querySelector("[data-home-layer-stage]");
   const labFeed = document.querySelector("#lab-feed");
@@ -30,6 +187,9 @@
     let wasPastHero = document.body.classList.contains("is-past-hero");
     let navReturnTimer = 0;
     let layerEndLockTimer = 0;
+    let footerRevealTimer = 0;
+    let footerRetractTimer = 0;
+    let footerWasRevealed = false;
     let layerEndLocked = false;
 
     const getLayerScrollRange = () => {
@@ -68,6 +228,43 @@
 
     const requestHomeLayerReveal = () => {
       if (!layerFrame) layerFrame = window.requestAnimationFrame(syncHomeLayerReveal);
+    };
+
+    const resetFooterRetractTimer = () => {
+      const range = getLayerScrollRange();
+      const footerRevealTop = range + 28;
+      const footerRevealed = window.scrollY > footerRevealTop;
+      if (!footerRevealed) {
+        footerWasRevealed = false;
+        document.body.classList.remove("is-home-footer-visible");
+        window.clearTimeout(footerRevealTimer);
+        window.clearTimeout(footerRetractTimer);
+        return;
+      }
+
+      // Footer 只在稳定滑出后淡入，避免触控板/滚轮惯性轻微越界时闪一下又被边界保护拉回。
+      if (!document.body.classList.contains("is-home-footer-visible")) {
+        window.clearTimeout(footerRevealTimer);
+        footerRevealTimer = window.setTimeout(() => {
+          if (window.scrollY <= footerRevealTop) return;
+          footerWasRevealed = true;
+          document.body.classList.add("is-home-footer-visible");
+          resetFooterRetractTimer();
+        }, reduceMotion ? 0 : 220);
+        return;
+      }
+
+      footerWasRevealed = true;
+      window.clearTimeout(footerRetractTimer);
+      footerRetractTimer = window.setTimeout(() => {
+        if (window.scrollY <= footerRevealTop) return;
+        document.body.classList.remove("is-home-footer-visible");
+        window.scrollTo({
+          top: range,
+          left: 0,
+          behavior: reduceMotion ? "auto" : "smooth",
+        });
+      }, 3000);
     };
 
     const holdLayerEnd = () => {
@@ -121,14 +318,19 @@
 
     syncHomeLayerReveal();
     onPage(window, "wheel", guardLayerEndScroll, { passive: false });
-    onPage(window, "scroll", requestHomeLayerReveal, { passive: true });
+    onPage(window, "scroll", () => {
+      requestHomeLayerReveal();
+      resetFooterRetractTimer();
+    }, { passive: true });
     onPage(window, "resize", syncHomeLayerReveal);
     addPageCleanup(() => {
       window.cancelAnimationFrame(layerFrame);
       window.clearTimeout(navReturnTimer);
       window.clearTimeout(layerEndLockTimer);
+      window.clearTimeout(footerRevealTimer);
+      window.clearTimeout(footerRetractTimer);
       layerEndLocked = false;
-      document.body.classList.remove("is-layer-end-hold");
+      document.body.classList.remove("is-layer-end-hold", "is-home-footer-visible");
     });
   }
 
@@ -1266,16 +1468,40 @@
       const bounds = physicsTags.getBoundingClientRect();
       physicsTags.classList.add("is-physics");
       physicsTags.classList.remove("is-settled");
+      const placedTargets = [];
+
+      const overlapsPlacedTarget = (candidate, padding = 12) =>
+        placedTargets.some(
+          (placed) =>
+            Math.abs(candidate.x + candidate.width / 2 - (placed.x + placed.width / 2)) <
+              (candidate.width + placed.width) / 2 + padding &&
+            Math.abs(candidate.y + candidate.height / 2 - (placed.y + placed.height / 2)) <
+              (candidate.height + placed.height) / 2 + padding,
+        );
 
       bodies = tagItems.map((tag, index) => {
         const width = tag.offsetWidth;
         const height = tag.offsetHeight;
         const [slotX, slotY, slotAngle] = tagSlots[index % tagSlots.length];
-        const targetX = bounds.width * slotX - width / 2;
-        const targetY = bounds.height * slotY - height / 2;
         const angle = (slotAngle * Math.PI) / 180;
         const maxX = Math.max(18, bounds.width - width - 18);
         const maxY = Math.max(34, bounds.height - height - 28);
+        const baseTargetX = Math.max(18, Math.min(maxX, bounds.width * slotX - width / 2));
+        const baseTargetY = Math.max(34, Math.min(maxY, bounds.height * slotY - height / 2));
+        let targetX = baseTargetX;
+        let targetY = baseTargetY;
+
+        for (let attempt = 0; attempt < 14; attempt += 1) {
+          const candidate = { x: targetX, y: targetY, width, height };
+          if (!overlapsPlacedTarget(candidate)) break;
+
+          const direction = attempt % 2 === 0 ? 1 : -1;
+          const radius = 18 + Math.floor(attempt / 2) * 18;
+          targetX = Math.max(18, Math.min(maxX, baseTargetX + Math.cos(index * 1.7 + attempt) * radius));
+          targetY = Math.max(34, Math.min(maxY, baseTargetY + direction * radius));
+        }
+
+        placedTargets.push({ x: targetX, y: targetY, width, height });
 
         return {
           el: tag,
@@ -1283,8 +1509,8 @@
           height,
           x: Math.max(18, Math.min(maxX, targetX + Math.sin(index * 2.17) * 34)),
           y: -height - index * 30,
-          targetX: Math.max(18, Math.min(maxX, targetX)),
-          targetY: Math.max(34, Math.min(maxY, targetY)),
+          targetX,
+          targetY,
           vx: Math.sin(index * 1.73) * 1.2,
           vy: 3 + index * 0.05,
           angle: angle - Math.sign(angle || 1) * 0.08,
@@ -1299,6 +1525,22 @@
       bodies.forEach((body) => {
         body.el.style.transform = `translate3d(${body.x}px, ${body.y}px, 0) rotate(${body.angle}rad)`;
       });
+    };
+
+    const freezeBodies = (snapToTarget = false) => {
+      bodies.forEach((body) => {
+        // 静止收尾时清掉速度；滚动期间直接贴近目标位，避免碰撞动画和页面滚动叠加造成视觉抖动。
+        body.vx = 0;
+        body.vy = 0;
+        body.angularVelocity = 0;
+        if (snapToTarget) {
+          body.x = body.targetX;
+          body.y = body.targetY;
+          body.angle = body.targetAngle;
+        }
+      });
+      renderBodies();
+      physicsTags.classList.add("is-settled");
     };
 
     const step = (time) => {
@@ -1429,17 +1671,6 @@
       });
     };
 
-    const freezeBodies = () => {
-      bodies.forEach((body) => {
-        // 静止收尾时冻结当前视觉位置，避免突然吸附到预设坐标造成跳变。
-        body.vx = 0;
-        body.vy = 0;
-        body.angularVelocity = 0;
-      });
-      renderBodies();
-      physicsTags.classList.add("is-settled");
-    };
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
@@ -1456,6 +1687,12 @@
       window.cancelAnimationFrame(animationId);
       window.clearTimeout(resizeTimer);
     });
+
+    onPage(window, "scroll", () => {
+      if (!started || physicsTags.classList.contains("is-settled")) return;
+      window.cancelAnimationFrame(animationId);
+      freezeBodies(true);
+    }, { passive: true });
 
     onPage(window, "resize", () => {
       window.clearTimeout(resizeTimer);

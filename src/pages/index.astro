@@ -1,10 +1,66 @@
 ﻿---
+import { getCollection } from "astro:content";
 import Announcement from "../components/Announcement.astro";
 import HeroTerminal from "../components/HeroTerminal.astro";
 import NavBar from "../components/NavBar.astro";
 import SakuraLayer from "../components/SakuraLayer.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
+
+const HOME_TAG_LIMIT = 10;
+const HOME_TAG_POOL_LIMIT = 18;
+const posts = (await getCollection("blog"))
+  .filter((post) => !post.data.draft)
+  .sort((a, b) => {
+    const dateA = a.data.updatedDate ?? a.data.pubDate;
+    const dateB = b.data.updatedDate ?? b.data.pubDate;
+    return dateB.valueOf() - dateA.valueOf();
+  });
+
+const tagIndex = new Map<
+  string,
+  {
+    count: number;
+    latestPostId: string;
+    latestTime: number;
+  }
+>();
+
+posts.forEach((post) => {
+  const postTime = (post.data.updatedDate ?? post.data.pubDate).valueOf();
+  post.data.tags.forEach((rawTag) => {
+    const tag = rawTag.trim();
+    if (!tag) return;
+
+    const current = tagIndex.get(tag);
+    if (!current) {
+      tagIndex.set(tag, {
+        count: 1,
+        latestPostId: post.id,
+        latestTime: postTime,
+      });
+      return;
+    }
+
+    current.count += 1;
+    if (postTime > current.latestTime) {
+      current.latestPostId = post.id;
+      current.latestTime = postTime;
+    }
+  });
+});
+
+const homeTags = [...tagIndex.entries()]
+  .sort((a, b) => b[1].count - a[1].count || b[1].latestTime - a[1].latestTime || a[0].localeCompare(b[0], "zh-CN"))
+  .slice(0, HOME_TAG_POOL_LIMIT)
+  .sort(() => Math.random() - 0.5)
+  .slice(0, HOME_TAG_LIMIT)
+  .map(([label, data], index) => ({
+    label,
+    href: `/blog/${data.latestPostId}/`,
+    isLarge: index < 2 && data.count > 1,
+    isWide: label.length >= 7,
+  }));
 ---
 
 <BaseLayout title="Aria-7th Lab" bodyClass="home-page">
@@ -287,88 +343,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     }
   </style>
 
-  <!-- ===================================================================
-     Splash 脚本：简单可靠的欢迎画面退出逻辑
-     - 图片加载完毕自动淡出（上限 8 秒兜底）
-     - 点击任意位置立即淡出
-     =================================================================== -->
-  <script is:inline>
-    (function () {
-      if (window.__ariaSplashSeen) return;
-      window.__ariaSplashSeen = true;
-
-      var splash = document.getElementById("aria-welcome-splash");
-      if (!splash) return;
-
-      var done = false;
-      var startTime = Date.now();
-      var MIN_SHOW_MS = 1800;
-
-      function go() {
-        if (done) return;
-        done = true;
-        splash.classList.add("is-dismissed");
-        setTimeout(function () { splash.remove(); }, 500);
-      }
-
-      function tryGo(ready) {
-        var elapsed = Date.now() - startTime;
-        if (ready && elapsed >= MIN_SHOW_MS) go();
-      }
-
-      setTimeout(go, 8000);
-      splash.addEventListener("click", go, { once: true });
-
-      // =============================================================
-      // 等 DOM 解析完毕后再追踪图片加载状态
-      // 原因：splash 在 <main> 之前，此时后续 <img> 还未解析
-      //      且 loading="lazy" 图片在 splash 遮盖下不会被触发
-      // =============================================================
-      function trackAllResources() {
-        var total = 0;
-        var left = 0;
-        var allReady = false;
-
-        function oneDone() {
-          left -= 1;
-          if (left <= 0) {
-            allReady = true;
-            tryGo(true);
-          }
-        }
-
-        // --- 页面上所有 <img>：强制 eager 加载并追踪 ---
-        var imgs = document.querySelectorAll("img");
-        for (var i = 0; i < imgs.length; i++) {
-          var img = imgs[i];
-          // 强制取消懒加载，让浏览器立即开始下载
-          if (img.loading === "lazy") img.loading = "eager";
-          if (img.complete) continue; // 已缓存/已加载
-          total += 1;
-          left += 1;
-          img.addEventListener("load", oneDone, { once: true });
-          img.addEventListener("error", oneDone, { once: true });
-        }
-
-        // 没有任何需要等的资源（全部已缓存）
-        if (total === 0) {
-          allReady = true;
-          tryGo(true);
-        }
-
-        // 最短时间兜底
-        setTimeout(function () { tryGo(allReady); }, MIN_SHOW_MS);
-      }
-
-      // 图片追踪必须等 DOM 解析完毕
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", trackAllResources);
-      } else {
-        trackAllResources();
-      }
-    })();
-  </script>
-
   <main class="home-shell" transition:animate="fade">
     <NavBar showBrand={false} />
     <Announcement />
@@ -401,20 +375,20 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <span class="personal-tag__brand-sub">anime notes / tiny toys / dev memo</span>
             </div>
             <div class="personal-tags__cloud" data-physics-tags>
-              <a class="personal-tag personal-tag--large" href="/blog/">ACGN</a>
-              <span class="personal-tag">漫画手帐</span>
-              <span class="personal-tag">Anime Diary</span>
-              <a class="personal-tag personal-tag--wide" href="/blog/firefly-blog-build-notes/">博客搭建记录</a>
-              <a class="personal-tag" href="/works/">Frontend</a>
-              <span class="personal-tag">Astro</span>
-              <span class="personal-tag personal-tag--large">Aria-7</span>
-              <a class="personal-tag" href="/blog/2bis-ai-image-platform/">AI 绘图</a>
-              <a class="personal-tag" href="/blog/archinstall-archlinux/">Linux</a>
-              <span class="personal-tag personal-tag--wide">项目复盘</span>
-              <a class="personal-tag" href="/blog/bilibili-music-player/">音乐收藏</a>
-              <a class="personal-tag" href="/me/">个人档案</a>
-              <span class="personal-tag">碎碎念</span>
-              <span class="personal-tag personal-tag--wide">Record the fleeting mortal moments</span>
+              {
+                homeTags.map((tag) => (
+                  <a
+                    class:list={[
+                      "personal-tag",
+                      { "personal-tag--large": tag.isLarge, "personal-tag--wide": tag.isWide },
+                    ]}
+                    href={tag.href}
+                    aria-label={`阅读 ${tag.label} 相关最新文章`}
+                  >
+                    {tag.label}
+                  </a>
+                ))
+              }
             </div>
           </div>
         </div>
