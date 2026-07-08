@@ -1,5 +1,5 @@
 ---
-import { CodeXml, Gamepad2, House, NotebookText, UserRound } from "@lucide/astro";
+import { CodeXml, Gamepad2, House, NotebookText, Search, UserRound } from "@lucide/astro";
 
 interface Props {
   compact?: boolean;
@@ -42,5 +42,12 @@ const navItems = [
         </a>
       ))
     }
+    <button class="nav-command-trigger" type="button" data-command-trigger aria-label="打开全站命令检索">
+      <Search size={20} stroke-width={2.3} aria-hidden="true" />
+      <span>
+        <strong>SEARCH</strong>
+        <small>Ctrl K</small>
+      </span>
+    </button>
   </nav>
 </header>

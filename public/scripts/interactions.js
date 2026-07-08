@@ -21,6 +21,278 @@
   onPage(document, "astro:before-swap", window.__ariaInteractionsCleanup, { once: true });
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const commandPalette = document.querySelector("[data-command-palette]");
+  if (commandPalette) {
+    const input = commandPalette.querySelector("[data-command-input]");
+    const resultsRoot = commandPalette.querySelector("[data-command-results]");
+    const template = commandPalette.querySelector("[data-command-result-template]");
+    const emptyState = commandPalette.querySelector("[data-command-empty]");
+    const statusNode = commandPalette.querySelector("[data-command-status]");
+    const indexNode = commandPalette.querySelector("[data-command-index]");
+    const iconNodes = new Map(
+      [...commandPalette.querySelectorAll("[data-command-icon]")].map((node) => [node.dataset.commandIcon, node.innerHTML]),
+    );
+    const triggers = [...document.querySelectorAll("[data-command-trigger]")];
+    const closeButtons = [...commandPalette.querySelectorAll("[data-command-close]")];
+    const recentStorageKey = "aria-command-recent";
+    const maxResults = 9;
+    const defaultIds = ["page:blog", "page:works", "page:game", "page:me"];
+    let entries = [];
+    let activeItems = [];
+    let selectedIndex = 0;
+    let lastFocused = null;
+
+    try {
+      entries = JSON.parse(indexNode?.textContent || "[]").map((entry) => ({
+        ...entry,
+        searchText: [entry.title, entry.description, entry.group, entry.meta, ...(entry.keywords || [])]
+          .join(" ")
+          .toLocaleLowerCase("zh-CN"),
+      }));
+    } catch {
+      entries = [];
+    }
+
+    const normalizeQuery = (value) => value.trim().toLocaleLowerCase("zh-CN");
+
+    const readRecentIds = () => {
+      try {
+        const parsed = JSON.parse(window.localStorage?.getItem(recentStorageKey) || "[]");
+        return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
+      } catch {
+        return [];
+      }
+    };
+
+    const saveRecentEntry = (entry) => {
+      if (!entry || entry.external) return;
+      const ids = [entry.id, ...readRecentIds().filter((id) => id !== entry.id)].slice(0, 5);
+      window.localStorage?.setItem(recentStorageKey, JSON.stringify(ids));
+    };
+
+    const getEntryById = (id) => entries.find((entry) => entry.id === id);
+
+    const scoreEntry = (entry, query) => {
+      if (!query) return 0;
+      const title = entry.title.toLocaleLowerCase("zh-CN");
+      const text = entry.searchText;
+      const compactQuery = query.replace(/\s+/g, "");
+      const requiresExactToken = /\d/.test(compactQuery);
+      let score = 0;
+      let matched = false;
+
+      if (title === query) {
+        score += 120;
+        matched = true;
+      }
+      if (title.startsWith(query)) {
+        score += 88;
+        matched = true;
+      }
+      if (title.includes(query)) {
+        score += 64;
+        matched = true;
+      }
+      if (text.includes(query)) {
+        score += 42;
+        matched = true;
+      }
+
+      // 简单的顺序匹配能覆盖拼写不完整的英文项目名，也不会让中文搜索变复杂。
+      let cursor = 0;
+      let streak = 0;
+      let matchedChars = 0;
+      for (const char of compactQuery) {
+        const found = text.indexOf(char, cursor);
+        if (found === -1) {
+          streak = 0;
+          continue;
+        }
+        score += 8 + Math.max(0, 8 - (found - cursor));
+        streak += 1;
+        matchedChars += 1;
+        cursor = found + 1;
+      }
+
+      if (!requiresExactToken && compactQuery.length > 0 && matchedChars === compactQuery.length) {
+        score += streak * 6;
+        matched = true;
+      }
+      if (!matched) return 0;
+      if (entry.kind === "post") score += 8;
+      if (entry.updatedTime) score += Math.min(12, Math.max(0, (Date.now() - entry.updatedTime) / -86400000 + 12));
+
+      return score;
+    };
+
+    const getFallbackEntries = () => {
+      const recentEntries = readRecentIds().map(getEntryById).filter(Boolean);
+      const defaults = defaultIds.map(getEntryById).filter(Boolean);
+      return [...recentEntries, ...defaults.filter((entry) => !recentEntries.some((recent) => recent.id === entry.id))].slice(0, maxResults);
+    };
+
+    const getMatches = (query) => {
+      if (!query) return getFallbackEntries();
+
+      return entries
+        .map((entry) => ({ entry, score: scoreEntry(entry, query) }))
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score || (b.entry.updatedTime || 0) - (a.entry.updatedTime || 0))
+        .slice(0, maxResults)
+        .map(({ entry }) => entry);
+    };
+
+    const setSelectedIndex = (nextIndex) => {
+      if (!activeItems.length) {
+        selectedIndex = 0;
+        return;
+      }
+
+      selectedIndex = (nextIndex + activeItems.length) % activeItems.length;
+      activeItems.forEach((item, index) => {
+        item.classList.toggle("is-active", index === selectedIndex);
+        item.setAttribute("aria-selected", String(index === selectedIndex));
+      });
+    };
+
+    const renderResults = () => {
+      if (!resultsRoot || !template) return;
+      const query = normalizeQuery(input?.value || "");
+      const matches = getMatches(query);
+      activeItems = [];
+      selectedIndex = 0;
+
+      resultsRoot.querySelectorAll("[data-command-result]").forEach((node) => node.remove());
+      if (emptyState) {
+        emptyState.hidden = matches.length > 0;
+        emptyState.querySelector("strong").textContent = query ? "没有找到匹配结果。" : "最近访问和常用入口会显示在这里。";
+        emptyState.querySelector("span").textContent = query ? "可以换一个关键词，或直接输入页面名称。" : "输入中文、英文、标签或项目名即可开始。";
+      }
+
+      matches.forEach((entry, index) => {
+        const item = template.content.firstElementChild.cloneNode(true);
+        item.href = entry.href;
+        item.dataset.commandId = entry.id;
+        item.dataset.commandExternal = String(Boolean(entry.external));
+        if (entry.external) {
+          item.target = "_blank";
+          item.rel = "noreferrer";
+        }
+        item.querySelector("[data-command-result-icon]").innerHTML = iconNodes.get(entry.kind) || iconNodes.get("post") || "";
+        item.querySelector("[data-command-result-title]").textContent = entry.title;
+        item.querySelector("[data-command-result-description]").textContent = entry.description;
+        item.querySelector("[data-command-result-group]").textContent = entry.group;
+        item.querySelector("[data-command-result-extra]").textContent = entry.meta || (entry.external ? "GitHub" : "站内");
+        item.addEventListener("mouseenter", () => setSelectedIndex(index));
+        item.addEventListener("click", () => saveRecentEntry(entry));
+        resultsRoot.appendChild(item);
+        activeItems.push(item);
+      });
+
+      if (statusNode) {
+        if (!query) statusNode.textContent = matches.length ? "常用入口已就绪。" : "输入关键词开始检索。";
+        else statusNode.textContent = matches.length ? `找到 ${matches.length} 条结果。` : "没有匹配结果。";
+      }
+
+      setSelectedIndex(0);
+    };
+
+    const openCommandPalette = () => {
+      if (!commandPalette.hidden) return;
+      lastFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      commandPalette.hidden = false;
+      document.documentElement.classList.add("command-palette-open");
+      renderResults();
+      window.setTimeout(() => input?.focus({ preventScroll: true }), reduceMotion ? 0 : 40);
+    };
+
+    const closeCommandPalette = () => {
+      if (commandPalette.hidden) return;
+      commandPalette.hidden = true;
+      document.documentElement.classList.remove("command-palette-open");
+      input.value = "";
+      lastFocused?.focus?.({ preventScroll: true });
+      lastFocused = null;
+    };
+
+    const openSelected = () => {
+      const item = activeItems[selectedIndex];
+      if (!item) return;
+      const entry = getEntryById(item.dataset.commandId);
+      saveRecentEntry(entry);
+      item.click();
+      closeCommandPalette();
+    };
+
+    triggers.forEach((trigger) => {
+      onPage(trigger, "click", openCommandPalette);
+    });
+    closeButtons.forEach((button) => {
+      onPage(button, "click", closeCommandPalette);
+    });
+    onPage(input, "input", renderResults);
+    onPage(commandPalette, "click", (event) => {
+      if (event.target?.matches?.("[data-command-close]")) closeCommandPalette();
+    });
+    onPage(document, "contextmenu", (event) => {
+      const target = event.target;
+      const editableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable;
+      const isHomePage = document.body.classList.contains("home-page");
+      const insidePalette = target?.closest?.("[data-command-palette]");
+
+      // 首页右键作为 Spotlight 的隐藏入口；只在主页面接管，避免影响文章页代码块等原生/站内右键行为。
+      if (!isHomePage || insidePalette || editableTarget || window.__ariaSplashActive) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      openCommandPalette();
+    }, true);
+    onPage(document, "keydown", (event) => {
+      const target = event.target;
+      const editableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable;
+      const key = event.key.toLowerCase();
+
+      if ((event.metaKey || event.ctrlKey) && key === "k") {
+        event.preventDefault();
+        openCommandPalette();
+        return;
+      }
+
+      if (event.key === "/" && !editableTarget && commandPalette.hidden) {
+        event.preventDefault();
+        openCommandPalette();
+        return;
+      }
+
+      if (commandPalette.hidden) return;
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeCommandPalette();
+      } else if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSelectedIndex(selectedIndex + 1);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSelectedIndex(selectedIndex - 1);
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        openSelected();
+      }
+    });
+    addPageCleanup(() => {
+      document.documentElement.classList.remove("command-palette-open");
+    });
+  }
+
   const initHomeSplash = () => {
     const routeSplash = document.getElementById("aria-welcome-splash");
     if (!routeSplash) {
@@ -388,9 +660,11 @@
     const syncNavMetrics = () => {
       // 导航宽度会随字体和视口变化；从子项尺寸计算，避免收起态 scrollWidth 被压小。
       const links = [...navPill.querySelectorAll(".nav-link")];
+      const commandTrigger = navPill.querySelector(".nav-command-trigger");
       const gap = Math.min(26, Math.max(12, window.innerWidth * 0.0115));
-      const linkWidth = links.length * 132;
-      const width = Math.min(window.innerWidth - 128, Math.ceil(linkWidth + gap * Math.max(0, links.length - 1) + 68));
+      const itemCount = links.length + (commandTrigger ? 1 : 0);
+      const linkWidth = links.length * 132 + (commandTrigger ? 118 : 0);
+      const width = Math.min(window.innerWidth - 128, Math.ceil(linkWidth + gap * Math.max(0, itemCount - 1) + 68));
       navPill.style.setProperty("--home-nav-open-width", `${Math.max(width, 320)}px`);
     };
 

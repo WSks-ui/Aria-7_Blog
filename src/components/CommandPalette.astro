@@ -1,0 +1,214 @@
+---
+import { getCollection } from "astro:content";
+import { CalendarDays, Command, FileText, FolderGit2, Hash, Search, Sparkles } from "@lucide/astro";
+import { repositories } from "../data/repositories";
+
+type CommandKind = "page" | "post" | "tag" | "project";
+
+interface CommandEntry {
+  id: string;
+  kind: CommandKind;
+  title: string;
+  description: string;
+  href: string;
+  group: string;
+  keywords: string[];
+  meta?: string;
+  external?: boolean;
+  updatedTime?: number;
+}
+
+const posts = (await getCollection("blog"))
+  .filter((post) => !post.data.draft)
+  .sort((a, b) => {
+    const dateA = a.data.updatedDate ?? a.data.pubDate;
+    const dateB = b.data.updatedDate ?? b.data.pubDate;
+    return dateB.valueOf() - dateA.valueOf();
+  });
+
+const staticPages: CommandEntry[] = [
+  {
+    id: "page:home",
+    kind: "page",
+    title: "Home",
+    description: "返回 Aria-7th Lab 首页。",
+    href: "/",
+    group: "页面",
+    keywords: ["home", "front page", "首页", "主页", "aria"],
+  },
+  {
+    id: "page:blog",
+    kind: "page",
+    title: "Blog",
+    description: "浏览所有技术笔记、学习记录和日常文章。",
+    href: "/blog/",
+    group: "页面",
+    keywords: ["blog", "notes", "文章", "归档", "技术笔记"],
+  },
+  {
+    id: "page:works",
+    kind: "page",
+    title: "Works",
+    description: "查看项目和 GitHub 作品列表。",
+    href: "/works/",
+    group: "页面",
+    keywords: ["works", "projects", "github", "项目", "作品"],
+  },
+  {
+    id: "page:game",
+    kind: "page",
+    title: "Game",
+    description: "打开 Aria Chess 小型游戏页面。",
+    href: "/game/",
+    group: "页面",
+    keywords: ["game", "chess", "playroom", "游戏", "国际象棋"],
+  },
+  {
+    id: "page:me",
+    kind: "page",
+    title: "Me",
+    description: "查看 Aria-7 的个人介绍。",
+    href: "/me/",
+    group: "页面",
+    keywords: ["me", "profile", "about", "个人", "介绍"],
+  },
+];
+
+const postEntries: CommandEntry[] = posts.map((post) => {
+  const date = post.data.updatedDate ?? post.data.pubDate;
+  const category = post.data.category ?? "文章";
+  return {
+    id: `post:${post.id}`,
+    kind: "post",
+    title: post.data.title,
+    description: post.data.description,
+    href: `/blog/${post.id}/`,
+    group: "文章",
+    keywords: [post.data.title, post.data.description, category, ...post.data.tags],
+    meta: `${category} / ${date.toLocaleDateString("zh-CN")}`,
+    updatedTime: date.valueOf(),
+  };
+});
+
+const tagMap = new Map<string, { count: number; latestPostId: string; latestTime: number }>();
+posts.forEach((post) => {
+  const postTime = (post.data.updatedDate ?? post.data.pubDate).valueOf();
+  post.data.tags.forEach((rawTag) => {
+    const tag = rawTag.trim();
+    if (!tag) return;
+    const current = tagMap.get(tag);
+    if (!current) {
+      tagMap.set(tag, { count: 1, latestPostId: post.id, latestTime: postTime });
+      return;
+    }
+    current.count += 1;
+    if (postTime > current.latestTime) {
+      current.latestPostId = post.id;
+      current.latestTime = postTime;
+    }
+  });
+});
+
+const tagEntries: CommandEntry[] = [...tagMap.entries()]
+  .sort((a, b) => b[1].count - a[1].count || b[1].latestTime - a[1].latestTime || a[0].localeCompare(b[0], "zh-CN"))
+  .map(([tag, data]) => ({
+    id: `tag:${tag}`,
+    kind: "tag",
+    title: `#${tag}`,
+    description: `查看 ${tag} 相关最新文章，共 ${data.count} 篇记录。`,
+    href: `/blog/${data.latestPostId}/`,
+    group: "标签",
+    keywords: [tag, `#${tag}`, "tag", "标签"],
+    meta: `${data.count} 篇`,
+    updatedTime: data.latestTime,
+  }));
+
+const projectEntries: CommandEntry[] = repositories.map((repo) => ({
+  id: `project:${repo.name}`,
+  kind: "project",
+  title: repo.name,
+  description: repo.description,
+  href: repo.url,
+  group: "项目",
+  keywords: [repo.name, repo.description, repo.language, repo.mood, ...repo.tags],
+  meta: `${repo.language} / ${repo.mood}`,
+  external: true,
+  updatedTime: new Date(repo.updated).valueOf(),
+}));
+
+const commandIndex = [...staticPages, ...postEntries, ...tagEntries, ...projectEntries];
+const indexJson = JSON.stringify(commandIndex).replace(/</g, "\\u003c");
+---
+
+<div class="command-palette" data-command-palette hidden>
+  <script is:inline type="application/json" data-command-index set:html={indexJson}></script>
+  <button class="command-palette__backdrop" type="button" data-command-close aria-label="关闭 Aria Spotlight"></button>
+  <section
+    class="command-palette__panel glass-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="aria-command-title"
+  >
+    <header class="command-palette__header">
+      <span class="command-palette__badge" aria-hidden="true">
+        <Command size={20} />
+      </span>
+      <div>
+        <p class="command-palette__eyebrow">ARIA SPOTLIGHT</p>
+        <h2 id="aria-command-title">全站命令检索</h2>
+      </div>
+      <button class="command-palette__close" type="button" data-command-close aria-label="关闭">
+        Esc
+      </button>
+    </header>
+
+    <label class="command-search" for="aria-command-input">
+      <Search size={20} aria-hidden="true" />
+      <input
+        id="aria-command-input"
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="搜索文章、标签、项目，或输入 /blog、works..."
+        data-command-input
+      />
+      <kbd>Ctrl K</kbd>
+    </label>
+
+    <div class="command-palette__meta" aria-live="polite">
+      <span data-command-status>输入关键词开始检索。</span>
+      <span class="command-palette__hint">↑ ↓ 选择 / Enter 打开</span>
+    </div>
+
+    <div class="command-results" data-command-results role="listbox" aria-label="检索结果">
+      <div class="command-empty" data-command-empty>
+        <Sparkles size={22} aria-hidden="true" />
+        <strong>最近访问和常用入口会显示在这里。</strong>
+        <span>输入中文、英文、标签或项目名即可开始。</span>
+      </div>
+    </div>
+
+    <template data-command-result-template>
+      <a class="command-result" href="#" role="option" data-command-result>
+        <span class="command-result__icon" data-command-result-icon aria-hidden="true">
+          <FileText size={18} />
+        </span>
+        <span class="command-result__body">
+          <strong data-command-result-title></strong>
+          <small data-command-result-description></small>
+        </span>
+        <span class="command-result__meta">
+          <span data-command-result-group></span>
+          <small data-command-result-extra></small>
+        </span>
+      </a>
+    </template>
+
+    <div class="command-palette__icons" hidden aria-hidden="true">
+      <span data-command-icon="page"><FolderGit2 size={18} /></span>
+      <span data-command-icon="post"><FileText size={18} /></span>
+      <span data-command-icon="tag"><Hash size={18} /></span>
+      <span data-command-icon="project"><CalendarDays size={18} /></span>
+    </div>
+  </section>
+</div>

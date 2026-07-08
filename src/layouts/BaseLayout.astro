@@ -1,5 +1,6 @@
 ---
 import { ClientRouter } from "astro:transitions";
+import CommandPalette from "../components/CommandPalette.astro";
 import CustomCursor from "../components/CustomCursor.astro";
 import SideTools from "../components/SideTools.astro";
 import "../styles/global.css";
@@ -46,6 +47,7 @@ const pageTitle = title === "Aria-7th Lab" ? title : `${title} | Aria-7th Lab`;
     <div transition:persist="aria-side-tools">
       <SideTools />
     </div>
+    <CommandPalette />
     <slot />
     <script>
       declare global {
