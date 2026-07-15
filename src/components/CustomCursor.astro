@@ -8,12 +8,16 @@ import "../styles/custom-cursor.css";
   <span class="custom-cursor-toast" data-custom-cursor-toast></span>
 </div>
 
-<script is:inline>
+<script>
+  // @ts-nocheck
+  import { RuntimeStyles } from "../scripts/core/runtime-styles";
+
   (() => {
     if (window.__ariaCustomCursorReady) return;
     window.__ariaCustomCursorReady = true;
 
     const root = document.documentElement;
+    const runtimeStyles = new RuntimeStyles();
     const minWidth = 1024;
     const finePointer = window.matchMedia("(pointer: fine)");
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -51,16 +55,32 @@ import "../styles/custom-cursor.css";
 
     const setTransform = (element, x, y, size, extra = "") => {
       if (!element) return;
-      element.style.transform = `translate3d(${x - size / 2}px, ${y - size / 2}px, 0) ${extra}`;
+      runtimeStyles.set(
+        element,
+        "transform",
+        `translate3d(${x - size / 2}px, ${y - size / 2}px, 0) ${extra}`,
+      );
     };
 
     const animate = () => {
-      if (!enabled) return;
+      if (!enabled) {
+        frameId = 0;
+        return;
+      }
       orbitX += (pointerX - orbitX) * 0.2;
       orbitY += (pointerY - orbitY) * 0.2;
       setTransform(dot, pointerX, pointerY, dotSize, pressing ? "scale(0.82)" : "");
       setTransform(orbit, orbitX, orbitY, orbitSize, pressing ? "scale(0.82)" : "");
-      frameId = window.requestAnimationFrame(animate);
+
+      // 光标停止后不再维持永久 RAF 循环，只有指针移动或按压状态变化时才继续渲染。
+      if (Math.hypot(pointerX - orbitX, pointerY - orbitY) > 0.12) {
+        frameId = window.requestAnimationFrame(animate);
+      } else {
+        orbitX = pointerX;
+        orbitY = pointerY;
+        setTransform(orbit, orbitX, orbitY, orbitSize, pressing ? "scale(0.82)" : "");
+        frameId = 0;
+      }
     };
 
     const startAnimation = () => {
@@ -78,10 +98,13 @@ import "../styles/custom-cursor.css";
       if (!enabled || !layer) return;
       const ripple = document.createElement("span");
       ripple.className = "custom-cursor-ripple";
-      ripple.style.left = `${x}px`;
-      ripple.style.top = `${y}px`;
+      runtimeStyles.set(ripple, "left", `${x}px`);
+      runtimeStyles.set(ripple, "top", `${y}px`);
       layer.appendChild(ripple);
-      ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
+      ripple.addEventListener("animationend", () => {
+        runtimeStyles.clear(ripple);
+        ripple.remove();
+      }, { once: true });
     };
 
     const hideToast = () => {
@@ -93,8 +116,8 @@ import "../styles/custom-cursor.css";
       if (!toast) return;
       window.clearTimeout(toastTimer);
       toast.textContent = message;
-      toast.style.left = `${Math.min(window.innerWidth - 210, Math.max(16, x + 18))}px`;
-      toast.style.top = `${Math.min(window.innerHeight - 72, Math.max(16, y + 18))}px`;
+      runtimeStyles.set(toast, "left", `${Math.min(window.innerWidth - 210, Math.max(16, x + 18))}px`);
+      runtimeStyles.set(toast, "top", `${Math.min(window.innerHeight - 72, Math.max(16, y + 18))}px`);
       root.classList.add("custom-cursor-toast-visible");
       toastTimer = window.setTimeout(hideToast, 1500);
     };
@@ -112,9 +135,7 @@ import "../styles/custom-cursor.css";
 
       input.value = text;
       input.setAttribute("readonly", "");
-      input.style.position = "fixed";
-      input.style.inset = "0 auto auto -999px";
-      input.style.opacity = "0";
+      input.className = "custom-cursor-copy-source";
       document.body.appendChild(input);
       input.focus({ preventScroll: true });
       input.select();
@@ -171,24 +192,33 @@ import "../styles/custom-cursor.css";
         const dy = event.clientY - pressStartY;
         if (Math.hypot(dx, dy) > 10) clearLongPress();
       }
-      if (enabled) root.classList.add("custom-cursor-visible");
+      if (enabled) {
+        root.classList.add("custom-cursor-visible");
+        startAnimation();
+      }
     };
 
     const onPointerDown = (event) => {
-      if (event.button !== 0) return;
+      if (!enabled || event.button !== 0) return;
       pressing = true;
       pressStartX = event.clientX;
       pressStartY = event.clientY;
       clearLongPress();
       longPressTimer = window.setTimeout(runLongPressCopy, longPressDelay);
-      if (enabled) root.classList.add("custom-cursor-pressing");
+      if (enabled) {
+        root.classList.add("custom-cursor-pressing");
+        startAnimation();
+      }
     };
 
     const onPointerUp = (event) => {
-      if (event.button !== 0) return;
+      if (!enabled || event.button !== 0) return;
       pressing = false;
       clearLongPress();
-      if (enabled) root.classList.remove("custom-cursor-pressing");
+      if (enabled) {
+        root.classList.remove("custom-cursor-pressing");
+        startAnimation();
+      }
       createRipple(event.clientX, event.clientY);
 
       // 长按复制后通常会紧接着触发一次 click，短暂保留拦截标记即可。
@@ -209,8 +239,10 @@ import "../styles/custom-cursor.css";
     };
 
     const onContextMenu = (event) => {
+      // 窄屏、粗指针和减少动画模式会关闭自定义光标，此时必须完整恢复浏览器原生右键。
+      if (!enabled) return;
       event.preventDefault();
-      if (enabled) root.classList.add("custom-cursor-visible");
+      root.classList.add("custom-cursor-visible");
       showToast("右键菜单已关闭", event.clientX, event.clientY);
     };
 
@@ -224,6 +256,7 @@ import "../styles/custom-cursor.css";
       root.classList.remove("custom-cursor-visible", "custom-cursor-pressing");
       pressing = false;
       clearLongPress();
+      stopAnimation();
     };
 
     const activate = () => {
@@ -236,6 +269,7 @@ import "../styles/custom-cursor.css";
       orbitX = pointerX;
       orbitY = pointerY;
       root.classList.add("custom-cursor-active");
+      window.dispatchEvent(new CustomEvent("aria:cursor-state", { detail: { enabled: true } }));
       startAnimation();
     };
 
@@ -253,9 +287,13 @@ import "../styles/custom-cursor.css";
         "custom-cursor-visible",
         "custom-cursor-pressing",
       );
+      window.dispatchEvent(new CustomEvent("aria:cursor-state", { detail: { enabled: false } }));
       layer
         ?.querySelectorAll(".custom-cursor-ripple")
-        .forEach((ripple) => ripple.remove());
+        .forEach((ripple) => {
+          runtimeStyles.clear(ripple);
+          ripple.remove();
+        });
     };
 
     const refresh = () => {

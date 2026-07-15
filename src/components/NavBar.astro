@@ -1,5 +1,6 @@
 ---
 import { CodeXml, Gamepad2, House, NotebookText, Search, UserRound } from "@lucide/astro";
+import { isNavItemActive } from "../scripts/core/navigation";
 
 interface Props {
   compact?: boolean;
@@ -20,9 +21,9 @@ const navItems = [
 <header class:list={["site-header", { "site-header--compact": compact, "site-header--brandless": !showBrand }]}>
   {
     showBrand && (
-      <a class="brand-pill" href="/" aria-label="Aria-7th Lab home" data-astro-prefetch="viewport">
+      <a class="brand-pill" href="/" aria-label="Aria-7th Lab home" data-astro-prefetch="hover">
         <span class="brand-mascot" aria-hidden="true">
-          <img src="/images/aria-avatar.jpg" alt="" loading="lazy" />
+          <img src="/images/aria-avatar.webp" alt="" width="512" height="512" loading="lazy" decoding="async" />
         </span>
         <strong>Aria-7th Lab</strong>
       </a>
@@ -33,7 +34,12 @@ const navItems = [
   <nav class="nav-pill glass-panel" aria-label="主导航">
     {
       navItems.map(({ href, label, sub, icon: Icon }) => (
-        <a class:list={["nav-link", { active: Astro.url.pathname === href }]} href={href} data-astro-prefetch="viewport">
+        <a
+          class:list={["nav-link", { active: isNavItemActive(Astro.url.pathname, href) }]}
+          href={href}
+          aria-current={isNavItemActive(Astro.url.pathname, href) ? "page" : undefined}
+          data-astro-prefetch="hover"
+        >
           <Icon size={22} stroke-width={2.2} aria-hidden="true" />
           <span>
             <strong>{label}</strong>

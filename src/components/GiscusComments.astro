@@ -14,25 +14,26 @@ const giscus = {
 };
 ---
 
-<section class="comments-shell glass-panel" id="comments" aria-label="评论区">
+<section
+  class="comments-shell glass-panel"
+  id="comments"
+  aria-label="评论区"
+  data-giscus-root
+  data-repo={giscus.repo}
+  data-repo-id={giscus.repoId}
+  data-category={giscus.category}
+  data-category-id={giscus.categoryId}
+  data-mapping={giscus.mapping}
+  data-strict={giscus.strict}
+  data-reactions-enabled={giscus.reactionsEnabled}
+  data-emit-metadata={giscus.emitMetadata}
+  data-input-position={giscus.inputPosition}
+  data-theme="light"
+  data-lang={giscus.lang}
+  data-loading={giscus.loading}
+>
   <div class="comments-shell__header">
     <span>COMMENTS</span>
     <strong>留下想法</strong>
   </div>
-  <script is:inline src="https://giscus.app/client.js"
-    data-repo={giscus.repo}
-    data-repo-id={giscus.repoId}
-    data-category={giscus.category}
-    data-category-id={giscus.categoryId}
-    data-mapping={giscus.mapping}
-    data-strict={giscus.strict}
-    data-reactions-enabled={giscus.reactionsEnabled}
-    data-emit-metadata={giscus.emitMetadata}
-    data-input-position={giscus.inputPosition}
-    data-theme="light"
-    data-lang={giscus.lang}
-    data-loading={giscus.loading}
-    crossorigin="anonymous"
-    async>
-  </script>
 </section>

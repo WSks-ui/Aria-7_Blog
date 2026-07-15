@@ -6,9 +6,15 @@ import NavBar from "../components/NavBar.astro";
 import SakuraLayer from "../components/SakuraLayer.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import "../styles/home.css";
 
 const HOME_TAG_LIMIT = 10;
 const HOME_TAG_POOL_LIMIT = 18;
+const stableTagScore = (value: string) => {
+  let hash = 2166136261;
+  for (const char of value) hash = Math.imul(hash ^ char.codePointAt(0)!, 16777619);
+  return hash >>> 0;
+};
 const posts = (await getCollection("blog"))
   .filter((post) => !post.data.draft)
   .sort((a, b) => {
@@ -53,7 +59,7 @@ posts.forEach((post) => {
 const homeTags = [...tagIndex.entries()]
   .sort((a, b) => b[1].count - a[1].count || b[1].latestTime - a[1].latestTime || a[0].localeCompare(b[0], "zh-CN"))
   .slice(0, HOME_TAG_POOL_LIMIT)
-  .sort(() => Math.random() - 0.5)
+  .sort((a, b) => stableTagScore(a[0]) - stableTagScore(b[0]))
   .slice(0, HOME_TAG_LIMIT)
   .map(([label, data], index) => ({
     label,
@@ -66,8 +72,8 @@ const homeTags = [...tagIndex.entries()]
 <BaseLayout title="Aria-7th Lab" bodyClass="home-page">
   <!-- ===================================================================
        Aria-7th Lab 欢迎画面
-       静默预加载首页图片与视频资源，就绪后自动淡出进入主页
-       上限 8 秒，用户可手动点击跳过
+       只等待首屏主视觉，就绪后自动淡出进入主页
+       最长 2.5 秒，用户可随时点击或按键跳过
        =================================================================== -->
   <div id="aria-welcome-splash" class="aria-welcome-splash" aria-hidden="false" tabindex="0" role="button" aria-label="轻触进入主页">
     <div class="aria-welcome-splash__glow" aria-hidden="true"></div>
@@ -98,7 +104,7 @@ const homeTags = [...tagIndex.entries()]
   <!-- ===================================================================
        Splash 样式：内联在首页，匹配 Aria-7th Lab 粉白渐变终端风格
        =================================================================== -->
-  <style is:inline>
+  <style>
     .aria-welcome-splash {
       position: fixed;
       inset: 0;
@@ -343,7 +349,7 @@ const homeTags = [...tagIndex.entries()]
     }
   </style>
 
-  <main class="home-shell" transition:animate="fade">
+  <main class="home-shell">
     <NavBar showBrand={false} />
     <Announcement />
     <SakuraLayer />
@@ -357,6 +363,21 @@ const homeTags = [...tagIndex.entries()]
 
     <div class="home-layer-stage" data-home-layer-stage>
       <section class="hero-section home-layer home-layer--hero" aria-labelledby="hero-title">
+        <picture class="hero-section__media" aria-hidden="true">
+          <source media="(max-width: 900px)" srcset="/images/hero-bg-mobile.avif" type="image/avif" />
+          <source srcset="/images/hero-bg.avif" type="image/avif" />
+          <source srcset="/images/hero-bg.webp" type="image/webp" />
+          <img
+            src="/images/hero-bg.webp"
+            alt=""
+            width="1672"
+            height="941"
+            loading="eager"
+            decoding="async"
+            fetchpriority="high"
+            data-splash-critical
+          />
+        </picture>
         <div class="hero-glow" aria-hidden="true"></div>
         <p class="eyebrow hero-eyebrow">PERSONAL SCRAPBOOK / ANIME DIARY / DEV NOTES</p>
         <h1 id="hero-title" class="hero-title">Aria-7th Lab</h1>
@@ -366,7 +387,21 @@ const homeTags = [...tagIndex.entries()]
 
       <section class="home-next home-layer home-layer--feed" id="lab-feed" aria-labelledby="lab-feed-title">
         <div class="home-next__inner">
-          <img class="home-next__video" src="/images/home-bg.png" alt="" loading="eager" aria-hidden="true" />
+          <picture class="home-next__media" aria-hidden="true">
+            <source media="(max-width: 900px)" srcset="/images/home-bg-mobile.webp" type="image/webp" />
+            <source media="(min-width: 901px)" srcset="/images/home-bg.avif" type="image/avif" />
+            <source media="(min-width: 901px)" srcset="/images/home-bg.webp" type="image/webp" />
+            <img
+              class="home-next__video"
+              src="/images/home-bg.webp"
+              alt=""
+              width="2048"
+              height="1151"
+              loading="lazy"
+              decoding="async"
+              fetchpriority="low"
+            />
+          </picture>
 
           <div class="personal-tags" aria-label="个人标签">
             <div class="personal-tags__brand">

@@ -1,10 +1,13 @@
 ﻿---
-const year = new Date().getFullYear();
+const year = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+}).format(new Date());
 ---
 
 <footer class="site-footer" aria-label="站点页脚">
   <p class="site-footer__line">
-    &copy; {year} Aria-7
+    &copy; <span data-current-year>{year}</span> Aria-7
   </p>
   <p class="site-footer__line">
     Powered by <a href="https://astro.build/" target="_blank" rel="noopener noreferrer">Astro</a>

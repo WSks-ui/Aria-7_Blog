@@ -2,11 +2,12 @@
 import SiteFooter from "../components/SiteFooter.astro";
 import NavBar from "../components/NavBar.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import "../styles/game.css";
 ---
 
 <BaseLayout title="Aria Chess" description="Aria-7th Lab 的国际象棋页面。" bodyClass="inner-page chess-page">
   <NavBar compact />
-  <main class="page-frame" transition:animate="fade">
+  <main class="page-frame">
     <section class="chess-room" data-chess-room>
       <div class="chess-start" data-chess-start>
         <p class="eyebrow">aria@chess:~$ ready</p>

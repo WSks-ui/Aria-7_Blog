@@ -2,6 +2,7 @@
 import { getCollection, render } from "astro:content";
 import PostLayout from "../../layouts/PostLayout.astro";
 import { getPostMetrics } from "../../utils/postMetrics";
+import { getBlogStats } from "../../utils/blogStats";
 
 export async function getStaticPaths() {
   const posts = await getCollection("blog", ({ data }) => !data.draft);
@@ -16,23 +17,11 @@ const { post } = Astro.props;
 const { Content, headings } = await render(post);
 const metrics = getPostMetrics(post.body);
 const allPosts = await getCollection("blog", ({ data }) => !data.draft);
-const allPostMetrics = allPosts.map((entry) => getPostMetrics(entry.body));
 const currentDate = new Date();
-const dayMs = 24 * 60 * 60 * 1000;
-const blogStart = new Date("2026-05-21T00:00:00+08:00");
-const runtimeDays = Math.max(1, Math.ceil((currentDate.getTime() - blogStart.getTime()) / dayMs));
-const latestActivityDate = allPosts.reduce((latest, entry) => {
-  const date = entry.data.updatedDate ?? entry.data.pubDate;
-  return date > latest ? date : latest;
-}, new Date(0));
-const daysSinceLatest = Math.max(0, Math.floor((currentDate.getTime() - latestActivityDate.getTime()) / dayMs));
+const stats = getBlogStats(allPosts, { now: currentDate });
 const articleStats = {
-  posts: allPosts.length,
-  categories: new Set(allPosts.map((entry) => entry.data.category ?? "杂谈")).size,
-  tags: new Set(allPosts.flatMap((entry) => entry.data.tags)).size,
-  words: allPostMetrics.reduce((sum, item) => sum + item.words, 0),
-  runtimeDays,
-  latestActivityText: daysSinceLatest === 0 ? "今天" : `${daysSinceLatest} 天前`,
+  ...stats,
+  latestActivityDate: stats.latestActivityDate.toISOString(),
 };
 ---
 

@@ -27,18 +27,10 @@ const pageTitle = title === "Aria-7th Lab" ? title : `${title} | Aria-7th Lab`;
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
-    <!-- ===================================================================
-         资源预加载提示：加速首屏关键资源和外站连接的加载
-         - preconnect：提前建立 giscus.app 的 TLS 连接
-         - preload：预加载 favicon 和关键 CSS，避免渲染阻塞
-         =================================================================== -->
-    <link rel="preconnect" href="https://giscus.app" crossorigin />
-    <link rel="preload" href="/favicon.svg" as="image" type="image/svg+xml" />
-    <link rel="prefetch" href="/images/aria-avatar.jpg" as="image" />
     <title>{pageTitle}</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/runtime-styles.css" data-aria-runtime-styles />
     <ClientRouter />
-    <script is:inline src="/scripts/interactions.js" defer data-astro-rerun></script>
   </head>
   <body class={bodyClass}>
     <div transition:persist="aria-custom-cursor">
@@ -50,27 +42,19 @@ const pageTitle = title === "Aria-7th Lab" ? title : `${title} | Aria-7th Lab`;
     <CommandPalette />
     <slot />
     <script>
+      import { startBootstrap } from "../scripts/bootstrap";
+
       declare global {
         interface Window {
-          __ariaRouteEnhancersReady?: boolean;
-          __ariaChessLoader?: Promise<void>;
+          __ariaBootstrapReady?: boolean;
+          __ariaInteractionsCleanup?: () => void;
+          __ariaSplashSeen?: boolean;
+          __ariaSplashActive?: boolean;
+          __ariaCustomCursorReady?: boolean;
         }
       }
 
-      // 客户端路由只替换页面主体，页面级模块可能被浏览器去重；全站入口负责补齐切页后的增强初始化。
-      const syncRouteEnhancers = () => {
-        if (!document.querySelector("[data-chess-room]")) return;
-        window.__ariaChessLoader = import("../scripts/chess-playroom.js").then(({ initChessPlayroom }) => {
-          initChessPlayroom();
-        });
-      };
-
-      if (!window.__ariaRouteEnhancersReady) {
-        window.__ariaRouteEnhancersReady = true;
-        document.addEventListener("astro:page-load", syncRouteEnhancers);
-      }
-
-      syncRouteEnhancers();
+      startBootstrap();
     </script>
   </body>
 </html>

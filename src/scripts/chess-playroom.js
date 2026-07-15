@@ -1,4 +1,5 @@
 import { Chess } from "chess.js";
+import { RuntimeStyles } from "./core/runtime-styles";
 
 export const initChessPlayroom = () => {
   const room = document.querySelector("[data-chess-room]");
@@ -32,6 +33,7 @@ export const initChessPlayroom = () => {
   if (!boardNode || !statusNode || !tipNode || !logNode) return;
 
   const game = new Chess();
+  const runtimeStyles = new RuntimeStyles();
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
   const pieceMarks = {
@@ -63,6 +65,12 @@ export const initChessPlayroom = () => {
   let timerElapsedMs = 0;
   let timerTickId = 0;
   let isDisposed = false;
+
+  // AI 的逻辑锁与视觉状态必须始终同步；切页、悔棋或新局取消异步回合时也要清掉类名。
+  const setAiThinking = (thinking) => {
+    aiThinking = thinking;
+    room.classList.toggle("is-thinking", thinking);
+  };
 
   const pieceValues = {
     p: 1,
@@ -204,7 +212,7 @@ export const initChessPlayroom = () => {
 
   const syncMoveLog = () => {
     const history = game.history({ verbose: true });
-    logNode.innerHTML = "";
+    logNode.replaceChildren();
     if (!history.length) {
       const empty = document.createElement("span");
       empty.className = "chess-move-log__empty";
@@ -308,7 +316,7 @@ export const initChessPlayroom = () => {
     captured.w = [];
     captured.b = [];
     lastMove = null;
-    aiThinking = false;
+    setAiThinking(false);
     aiTurnToken += 1;
     startTimer();
     clearSelection();
@@ -327,9 +335,9 @@ export const initChessPlayroom = () => {
     const clone = pieceNode.cloneNode(true);
     clone.className = `${pieceNode.className} chess-piece-fx ${className}`;
     clone.setAttribute("aria-hidden", "true");
-    clone.style.setProperty("--fx-left", `${squareRect.left}px`);
-    clone.style.setProperty("--fx-top", `${squareRect.top}px`);
-    clone.style.setProperty("--fx-size", `${squareRect.width}px`);
+    runtimeStyles.set(clone, "--fx-left", `${squareRect.left}px`);
+    runtimeStyles.set(clone, "--fx-top", `${squareRect.top}px`);
+    runtimeStyles.set(clone, "--fx-size", `${squareRect.width}px`);
     document.body.append(clone);
     return clone;
   };
@@ -348,10 +356,10 @@ export const initChessPlayroom = () => {
     const capturedClone = createPieceFxClone(toSquareNode.querySelector(".chess-piece"), toSquareNode, "chess-piece-fx--capture");
     const captureDirection = moveInput.to.charCodeAt(0) >= moveInput.from.charCodeAt(0) ? 1 : -1;
 
-    movingClone?.style.setProperty("--move-x", `${toRect.left - fromRect.left}px`);
-    movingClone?.style.setProperty("--move-y", `${toRect.top - fromRect.top}px`);
-    capturedClone?.style.setProperty("--capture-x", `${captureDirection * (34 + Math.random() * 20)}px`);
-    capturedClone?.style.setProperty("--capture-rotate", `${captureDirection * (22 + Math.random() * 18)}deg`);
+    runtimeStyles.set(movingClone, "--move-x", `${toRect.left - fromRect.left}px`);
+    runtimeStyles.set(movingClone, "--move-y", `${toRect.top - fromRect.top}px`);
+    runtimeStyles.set(capturedClone, "--capture-x", `${captureDirection * (34 + Math.random() * 20)}px`);
+    runtimeStyles.set(capturedClone, "--capture-rotate", `${captureDirection * (22 + Math.random() * 18)}deg`);
 
     return { capturedClone, movingClone, to: moveInput.to };
   };
@@ -359,6 +367,8 @@ export const initChessPlayroom = () => {
   const playMoveFx = (fx) => {
     if (!fx) return;
     const finish = () => {
+      runtimeStyles.clear(fx.movingClone);
+      runtimeStyles.clear(fx.capturedClone);
       fx.movingClone?.remove();
       fx.capturedClone?.remove();
       if (hiddenLandingSquare === fx.to) {
@@ -383,9 +393,9 @@ export const initChessPlayroom = () => {
       const targetRect = targetNode.getBoundingClientRect();
       const targetCenterX = targetRect.left + targetRect.width / 2;
       const targetCenterY = targetRect.top + targetRect.height / 2;
-      targetNode.style.setProperty("--target-dx", `${originCenterX - targetCenterX}px`);
-      targetNode.style.setProperty("--target-dy", `${originCenterY - targetCenterY}px`);
-      targetNode.style.setProperty("--target-delay", `${Math.min(index * 26, 180)}ms`);
+      runtimeStyles.set(targetNode, "--target-dx", `${originCenterX - targetCenterX}px`);
+      runtimeStyles.set(targetNode, "--target-dy", `${originCenterY - targetCenterY}px`);
+      runtimeStyles.set(targetNode, "--target-delay", `${Math.min(index * 26, 180)}ms`);
       targetNode.classList.add("is-target-ripple");
     });
   };
@@ -393,7 +403,8 @@ export const initChessPlayroom = () => {
   const renderBoard = () => {
     const squares = getSquareOrder();
     const targetSet = new Set(legalTargets.map((move) => move.to));
-    boardNode.innerHTML = "";
+    boardNode.querySelectorAll("[data-aria-runtime-style]").forEach((node) => runtimeStyles.clear(node));
+    boardNode.replaceChildren();
     boardNode.classList.toggle("is-flipped", flipped);
 
     squares.forEach((square) => {
@@ -439,7 +450,7 @@ export const initChessPlayroom = () => {
     animateLegalTargets(square);
   };
 
-  const applyMove = (moveInput, source = "player") => {
+  const applyMove = (moveInput) => {
     const moveFx = prepareMoveFx(moveInput);
     const move = game.move(moveInput);
     if (!move) {
@@ -462,11 +473,6 @@ export const initChessPlayroom = () => {
       showResult();
     }
 
-    if (source === "player") {
-      room.classList.remove("is-thinking");
-      void room.offsetWidth;
-      room.classList.add("is-thinking");
-    }
     return true;
   };
 
@@ -512,18 +518,19 @@ export const initChessPlayroom = () => {
 
   const makeAiMove = () => {
     if (!aiToggle.checked || aiThinking || game.isGameOver()) return;
-    aiThinking = true;
+    setAiThinking(true);
     const token = ++aiTurnToken;
     statusNode.textContent = "电脑正在走棋...";
     const delay = 520 + Math.random() * 460;
 
     window.setTimeout(() => {
       if (isDisposed || token !== aiTurnToken) return;
-      const moves = game.moves({ verbose: true });
-      if (moves.length) {
-        applyMove(chooseAiMove(moves), "aria");
+      try {
+        const moves = game.moves({ verbose: true });
+        if (moves.length) applyMove(chooseAiMove(moves));
+      } finally {
+        setAiThinking(false);
       }
-      aiThinking = false;
     }, delay);
   };
 
@@ -593,16 +600,22 @@ export const initChessPlayroom = () => {
 
   window.addEventListener("pointermove", syncDrawerByPointer, { passive: true });
   window.addEventListener("mousemove", syncDrawerByPointer, { passive: true });
+  const dispose = () => {
+    if (isDisposed) return;
+    isDisposed = true;
+    aiTurnToken += 1;
+    setAiThinking(false);
+    window.clearInterval(timerTickId);
+    window.clearTimeout(drawerCloseTimer);
+    window.removeEventListener("pointermove", syncDrawerByPointer);
+    window.removeEventListener("mousemove", syncDrawerByPointer);
+    document.querySelectorAll(".chess-piece-fx[data-aria-runtime-style]").forEach((node) => node.remove());
+    runtimeStyles.dispose();
+    room.removeAttribute("data-chess-ready");
+  };
   document.addEventListener(
     "astro:before-swap",
-    () => {
-      isDisposed = true;
-      aiTurnToken += 1;
-      window.clearInterval(timerTickId);
-      window.clearTimeout(drawerCloseTimer);
-      window.removeEventListener("pointermove", syncDrawerByPointer);
-      window.removeEventListener("mousemove", syncDrawerByPointer);
-    },
+    dispose,
     { once: true },
   );
 
@@ -625,7 +638,7 @@ export const initChessPlayroom = () => {
       if (second?.captured) captured[second.color].pop();
     }
     lastMove = game.history({ verbose: true }).at(-1) || null;
-    aiThinking = false;
+    setAiThinking(false);
     clearSelection();
     syncCaptured();
     syncMoveLog();
@@ -653,10 +666,5 @@ export const initChessPlayroom = () => {
   syncStatus();
   syncTimer();
   renderBoard();
+  return dispose;
 };
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initChessPlayroom, { once: true });
-} else {
-  initChessPlayroom();
-}

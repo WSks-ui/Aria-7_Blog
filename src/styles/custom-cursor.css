@@ -116,6 +116,13 @@ html.custom-cursor-toast-visible .custom-cursor-toast {
   animation: ariaCursorRipple 620ms ease-out forwards;
 }
 
+/* 长按复制的兼容输入框必须由外部样式表隐藏，避免触发 style-src-attr CSP。 */
+.custom-cursor-copy-source {
+  position: fixed;
+  inset: 0 auto auto -999px;
+  opacity: 0;
+}
+
 @keyframes ariaCursorRipple {
   from {
     opacity: 0.82;

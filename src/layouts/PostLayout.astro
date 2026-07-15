@@ -13,6 +13,8 @@ import {
   Hash,
   Tags,
 } from "@lucide/astro";
+import { readSiteImageDimensions } from "../lib/images";
+import "../styles/article.css";
 
 interface TocItem {
   depth: number;
@@ -27,6 +29,7 @@ interface ArticleStats {
   words: number;
   runtimeDays: number;
   latestActivityText: string;
+  latestActivityDate?: string;
   minutes?: number;
 }
 
@@ -60,17 +63,19 @@ const {
   stats,
 } = Astro.props;
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  timeZone: "Asia/Shanghai",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
 });
 const displayTags = tags.slice(0, 10);
 const topToc = toc.filter((item) => item.depth <= 3).slice(0, 16);
+const coverDimensions = cover ? await readSiteImageDimensions(cover) : null;
 ---
 
 <BaseLayout title={title} description={description} bodyClass="inner-page article-page">
   <NavBar compact />
-  <main class="page-frame article-frame" data-article-frame transition:animate="fade">
+  <main class="page-frame article-frame" data-article-frame>
     <div class="article-page-grid">
       <div class="article-main-column">
         <nav class="article-topic-bar glass-panel" aria-label="文章导航">
@@ -115,7 +120,16 @@ const topToc = toc.filter((item) => item.depth <= 3).slice(0, 16);
             <p>{description}</p>
             {
               cover && (
-                <img class="article-cover" src={cover} alt="" loading="eager" decoding="async" fetchpriority="high" />
+                <img
+                  class="article-cover"
+                  src={cover}
+                  alt=""
+                  width={coverDimensions?.width}
+                  height={coverDimensions?.height}
+                  loading="eager"
+                  decoding="async"
+                  fetchpriority="high"
+                />
               )
             }
           </header>
@@ -150,11 +164,11 @@ const topToc = toc.filter((item) => item.depth <= 3).slice(0, 16);
                 </div>
                 <div>
                   <dt><Clock3 size={18} aria-hidden="true" />运行时长</dt>
-                  <dd>{stats.runtimeDays.toLocaleString("zh-CN")} 天</dd>
+                  <dd data-runtime-days data-runtime-start="2026-05-21T00:00:00+08:00">{stats.runtimeDays.toLocaleString("zh-CN")} 天</dd>
                 </div>
                 <div>
                   <dt><Activity size={18} aria-hidden="true" />最后活动</dt>
-                  <dd>{stats.latestActivityText}</dd>
+                  <dd data-latest-activity data-activity-date={stats.latestActivityDate}>{stats.latestActivityText}</dd>
                 </div>
               </dl>
             </section>

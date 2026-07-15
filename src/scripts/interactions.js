@@ -1,26 +1,56 @@
-(() => {
+import { PageScope } from "./core/page-scope";
+import { createSafeStorage } from "./core/safe-storage";
+import { calculateReadingProgress } from "./core/reading-progress";
+import { readLimitedText, validateMetingPayload } from "./core/media-policy";
+import { RuntimeStyles } from "./core/runtime-styles";
+import { buildCalendarModel, formatRelativeActivity, getRuntimeDays } from "./core/time";
+
+const FALLBACK_COMMAND_ENTRIES = [
+  { id: "page:home", kind: "page", title: "Home", description: "返回 Aria-7th Lab 首页。", href: "/", group: "页面", keywords: ["home", "首页", "主页"] },
+  { id: "page:blog", kind: "page", title: "Blog", description: "浏览所有技术笔记和文章。", href: "/blog/", group: "页面", keywords: ["blog", "文章", "归档"] },
+  { id: "page:works", kind: "page", title: "Works", description: "查看项目和作品列表。", href: "/works/", group: "页面", keywords: ["works", "项目", "作品"] },
+  { id: "page:game", kind: "page", title: "Game", description: "打开 Aria Chess。", href: "/game/", group: "页面", keywords: ["game", "chess", "游戏"] },
+  { id: "page:me", kind: "page", title: "Me", description: "查看个人介绍。", href: "/me/", group: "页面", keywords: ["me", "about", "个人"] },
+];
+let commandIndexPromise = null;
+
+const fetchCommandIndex = (url) => {
+  if (commandIndexPromise) return commandIndexPromise;
+  commandIndexPromise = fetch(url, { credentials: "same-origin" })
+    .then((response) => readLimitedText(response))
+    .then((text) => JSON.parse(text))
+    .then((payload) => Array.isArray(payload) ? payload : Promise.reject(new Error("检索索引格式无效")))
+    .catch((error) => {
+      commandIndexPromise = null;
+      throw error;
+    });
+  return commandIndexPromise;
+};
+
+export const initInteractions = (providedScope) => {
+  if (document.body.dataset.ariaInteractionsReady === "true") return;
   window.__ariaInteractionsCleanup?.();
+  document.body.dataset.ariaInteractionsReady = "true";
 
-  const pageCleanups = [];
-  let pageAlive = true;
-  const addPageCleanup = (cleanup) => pageCleanups.push(cleanup);
+  const scope = providedScope instanceof PageScope ? providedScope : new PageScope();
+  const storage = createSafeStorage();
+  const runtimeStyles = new RuntimeStyles();
+  const addPageCleanup = (cleanup) => scope.add(cleanup);
   const onPage = (target, type, listener, options) => {
-    if (!target?.addEventListener) return;
-    target.addEventListener(type, listener, options);
-    addPageCleanup(() => target.removeEventListener(type, listener, options));
+    scope.on(target, type, listener, options);
   };
 
-  // Astro 客户端路由切页时不会刷新整个窗口；这里集中清理页面级监听，避免越切越慢。
-  window.__ariaInteractionsCleanup = () => {
-    if (!pageAlive) return;
-    pageAlive = false;
-    while (pageCleanups.length) {
-      pageCleanups.pop()?.();
-    }
-  };
-  onPage(document, "astro:before-swap", window.__ariaInteractionsCleanup, { once: true });
+  const cleanup = () => scope.dispose();
+  window.__ariaInteractionsCleanup = cleanup;
+  addPageCleanup(() => runtimeStyles.dispose());
+  addPageCleanup(() => {
+    document.body.removeAttribute("data-aria-interactions-ready");
+    if (window.__ariaInteractionsCleanup === cleanup) delete window.__ariaInteractionsCleanup;
+  });
+  onPage(document, "astro:before-swap", cleanup, { once: true });
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const isCustomCursorEnabled = () => document.documentElement.classList.contains("custom-cursor-active");
   const commandPalette = document.querySelector("[data-command-palette]");
   if (commandPalette) {
     const input = commandPalette.querySelector("[data-command-input]");
@@ -28,36 +58,86 @@
     const template = commandPalette.querySelector("[data-command-result-template]");
     const emptyState = commandPalette.querySelector("[data-command-empty]");
     const statusNode = commandPalette.querySelector("[data-command-status]");
-    const indexNode = commandPalette.querySelector("[data-command-index]");
+    const indexUrl = commandPalette.dataset.commandIndexUrl || "/search-index.json";
+    const clearButton = commandPalette.querySelector("[data-command-clear]");
+    const clearRecentButton = commandPalette.querySelector("[data-command-clear-recent]");
+    const shortcutNode = commandPalette.querySelector("[data-command-shortcut]");
+    const filterButtons = [...commandPalette.querySelectorAll("[data-command-filter]")];
     const iconNodes = new Map(
-      [...commandPalette.querySelectorAll("[data-command-icon]")].map((node) => [node.dataset.commandIcon, node.innerHTML]),
+      [...commandPalette.querySelectorAll("[data-command-icon]")].map((node) => [
+        node.dataset.commandIcon,
+        node.firstElementChild?.cloneNode(true) ?? null,
+      ]),
     );
     const triggers = [...document.querySelectorAll("[data-command-trigger]")];
     const closeButtons = [...commandPalette.querySelectorAll("[data-command-close]")];
     const recentStorageKey = "aria-command-recent";
-    const maxResults = 9;
+    const maxResults = 10;
     const defaultIds = ["page:blog", "page:works", "page:game", "page:me"];
+    const filterLabels = new Map([
+      ["all", "全部"],
+      ["post", "文章"],
+      ["tag", "标签"],
+      ["project", "项目"],
+      ["page", "页面"],
+    ]);
     let entries = [];
+    let indexLoaded = false;
     let activeItems = [];
+    let activeFilter = "all";
     let selectedIndex = 0;
     let lastFocused = null;
+    let closeTimer = 0;
 
-    try {
-      entries = JSON.parse(indexNode?.textContent || "[]").map((entry) => ({
+    const normalizeEntries = (items) => items.map((entry) => ({
         ...entry,
+        searchTitle: entry.title.normalize("NFKC").toLocaleLowerCase("zh-CN"),
         searchText: [entry.title, entry.description, entry.group, entry.meta, ...(entry.keywords || [])]
           .join(" ")
+          .normalize("NFKC")
           .toLocaleLowerCase("zh-CN"),
       }));
-    } catch {
-      entries = [];
-    }
+    entries = normalizeEntries(FALLBACK_COMMAND_ENTRIES);
 
-    const normalizeQuery = (value) => value.trim().toLocaleLowerCase("zh-CN");
+    const ensureCommandIndex = async () => {
+      if (indexLoaded) return;
+      try {
+        const loadedEntries = await fetchCommandIndex(indexUrl);
+        if (scope.disposed) return;
+        entries = normalizeEntries(loadedEntries);
+        indexLoaded = true;
+        renderResults();
+      } catch {
+        if (statusNode) statusNode.textContent = "完整索引读取失败，可继续使用页面入口";
+      }
+    };
+
+    if (shortcutNode && /Macintosh|iPhone|iPad/.test(navigator.userAgent)) shortcutNode.textContent = "⌘ K";
+
+    const normalizeQuery = (value) => value.normalize("NFKC").trim().toLocaleLowerCase("zh-CN");
+
+    // #、@、/ 分别是标签、项目、页面的快捷检索前缀；它只临时收窄结果，不覆盖用户点选的分类。
+    const parseQuery = (value) => {
+      const rawQuery = normalizeQuery(value);
+      const prefixKind = rawQuery.startsWith("#")
+        ? "tag"
+        : rawQuery.startsWith("@")
+          ? "project"
+          : rawQuery.startsWith("/")
+            ? "page"
+            : null;
+      const query = prefixKind ? rawQuery.slice(1).trim() : rawQuery;
+      return {
+        query,
+        rawQuery,
+        kind: prefixKind || activeFilter,
+        terms: query.split(/\s+/).filter(Boolean),
+      };
+    };
 
     const readRecentIds = () => {
       try {
-        const parsed = JSON.parse(window.localStorage?.getItem(recentStorageKey) || "[]");
+        const parsed = storage.getJSON(recentStorageKey, []);
         return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
       } catch {
         return [];
@@ -65,35 +145,33 @@
     };
 
     const saveRecentEntry = (entry) => {
-      if (!entry || entry.external) return;
-      const ids = [entry.id, ...readRecentIds().filter((id) => id !== entry.id)].slice(0, 5);
-      window.localStorage?.setItem(recentStorageKey, JSON.stringify(ids));
+      if (!entry) return;
+      const ids = [entry.id, ...readRecentIds().filter((id) => id !== entry.id)].slice(0, 6);
+      storage.setJSON(recentStorageKey, ids);
     };
 
     const getEntryById = (id) => entries.find((entry) => entry.id === id);
 
-    const scoreEntry = (entry, query) => {
-      if (!query) return 0;
-      const title = entry.title.toLocaleLowerCase("zh-CN");
+    const scoreToken = (entry, token) => {
+      const title = entry.searchTitle;
       const text = entry.searchText;
-      const compactQuery = query.replace(/\s+/g, "");
-      const requiresExactToken = /\d/.test(compactQuery);
+      const requiresExactToken = /\d/.test(token);
       let score = 0;
       let matched = false;
 
-      if (title === query) {
+      if (title === token) {
         score += 120;
         matched = true;
       }
-      if (title.startsWith(query)) {
+      if (title.startsWith(token)) {
         score += 88;
         matched = true;
       }
-      if (title.includes(query)) {
+      if (title.includes(token)) {
         score += 64;
         matched = true;
       }
-      if (text.includes(query)) {
+      if (text.includes(token)) {
         score += 42;
         matched = true;
       }
@@ -102,7 +180,7 @@
       let cursor = 0;
       let streak = 0;
       let matchedChars = 0;
-      for (const char of compactQuery) {
+      for (const char of token) {
         const found = text.indexOf(char, cursor);
         if (found === -1) {
           streak = 0;
@@ -114,37 +192,88 @@
         cursor = found + 1;
       }
 
-      if (!requiresExactToken && compactQuery.length > 0 && matchedChars === compactQuery.length) {
+      if (!requiresExactToken && token.length > 1 && matchedChars === token.length) {
         score += streak * 6;
         matched = true;
       }
-      if (!matched) return 0;
+      return matched ? score : 0;
+    };
+
+    const scoreEntry = (entry, terms) => {
+      if (!terms.length) return 0;
+      const termScores = terms.map((term) => scoreToken(entry, term));
+      if (termScores.some((score) => score === 0)) return 0;
+
+      let score = termScores.reduce((total, termScore) => total + termScore, 0);
       if (entry.kind === "post") score += 8;
-      if (entry.updatedTime) score += Math.min(12, Math.max(0, (Date.now() - entry.updatedTime) / -86400000 + 12));
+      if (entry.updatedTime) {
+        const ageInDays = Math.max(0, (Date.now() - entry.updatedTime) / 86400000);
+        score += Math.max(0, 12 - ageInDays / 45);
+      }
 
       return score;
     };
 
-    const getFallbackEntries = () => {
+    const getFallbackEntries = (kind) => {
       const recentEntries = readRecentIds().map(getEntryById).filter(Boolean);
-      const defaults = defaultIds.map(getEntryById).filter(Boolean);
-      return [...recentEntries, ...defaults.filter((entry) => !recentEntries.some((recent) => recent.id === entry.id))].slice(0, maxResults);
+      const available = kind === "all" ? entries : entries.filter((entry) => entry.kind === kind);
+      const visibleRecent = recentEntries.filter((entry) => available.includes(entry));
+
+      // 默认结果同时保留最近访问、近期文章与主要页面，首次打开也能直接作为站点导航使用。
+      const recommended = kind === "all"
+        ? [
+            ...entries.filter((entry) => entry.kind === "post").slice(0, 4),
+            ...defaultIds.map(getEntryById).filter(Boolean),
+          ]
+        : available;
+      return [...visibleRecent, ...recommended.filter((entry) => !visibleRecent.includes(entry))].slice(0, maxResults);
     };
 
-    const getMatches = (query) => {
-      if (!query) return getFallbackEntries();
+    const getMatches = ({ query, kind, terms }) => {
+      if (!query) return getFallbackEntries(kind);
 
       return entries
-        .map((entry) => ({ entry, score: scoreEntry(entry, query) }))
+        .filter((entry) => kind === "all" || entry.kind === kind)
+        .map((entry) => ({ entry, score: scoreEntry(entry, terms) }))
         .filter(({ score }) => score > 0)
         .sort((a, b) => b.score - a.score || (b.entry.updatedTime || 0) - (a.entry.updatedTime || 0))
         .slice(0, maxResults)
         .map(({ entry }) => entry);
     };
 
-    const setSelectedIndex = (nextIndex) => {
+    const appendHighlightedText = (node, value, terms) => {
+      node.replaceChildren();
+      if (!terms.length) {
+        node.textContent = value;
+        return;
+      }
+
+      const pattern = terms
+        .filter((term) => term.length > 0)
+        .sort((a, b) => b.length - a.length)
+        .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+        .join("|");
+      if (!pattern) {
+        node.textContent = value;
+        return;
+      }
+
+      const matcher = new RegExp(`(${pattern})`, "gi");
+      value.split(matcher).filter(Boolean).forEach((part) => {
+        if (terms.some((term) => normalizeQuery(part) === term)) {
+          const mark = document.createElement("mark");
+          mark.textContent = part;
+          node.appendChild(mark);
+        } else {
+          node.appendChild(document.createTextNode(part));
+        }
+      });
+    };
+
+    const setSelectedIndex = (nextIndex, shouldScroll = false) => {
       if (!activeItems.length) {
         selectedIndex = 0;
+        input?.removeAttribute("aria-activedescendant");
         return;
       }
 
@@ -153,66 +282,120 @@
         item.classList.toggle("is-active", index === selectedIndex);
         item.setAttribute("aria-selected", String(index === selectedIndex));
       });
+      const activeItem = activeItems[selectedIndex];
+      input?.setAttribute("aria-activedescendant", activeItem.id);
+      if (shouldScroll) activeItem.scrollIntoView({ block: "nearest" });
     };
 
     const renderResults = () => {
       if (!resultsRoot || !template) return;
-      const query = normalizeQuery(input?.value || "");
-      const matches = getMatches(query);
+      const parsedQuery = parseQuery(input?.value || "");
+      const matches = getMatches(parsedQuery);
+      const recentIds = new Set(readRecentIds());
       activeItems = [];
       selectedIndex = 0;
 
-      resultsRoot.querySelectorAll("[data-command-result]").forEach((node) => node.remove());
+      resultsRoot.querySelectorAll("[data-command-result]").forEach((node) => {
+        runtimeStyles.clear(node);
+        node.remove();
+      });
       if (emptyState) {
         emptyState.hidden = matches.length > 0;
-        emptyState.querySelector("strong").textContent = query ? "没有找到匹配结果。" : "最近访问和常用入口会显示在这里。";
-        emptyState.querySelector("span").textContent = query ? "可以换一个关键词，或直接输入页面名称。" : "输入中文、英文、标签或项目名即可开始。";
+        emptyState.querySelector("strong").textContent = parsedQuery.query
+          ? `没有找到“${parsedQuery.query}”`
+          : "这个分类里暂时没有记录";
+        emptyState.querySelector("span").textContent = parsedQuery.query
+          ? "换个关键词，或切换到其他分类看看。"
+          : "切换到其他分类继续浏览。";
       }
 
       matches.forEach((entry, index) => {
         const item = template.content.firstElementChild.cloneNode(true);
+        item.id = `aria-command-option-${index}`;
         item.href = entry.href;
         item.dataset.commandId = entry.id;
+        item.dataset.commandKind = entry.kind;
         item.dataset.commandExternal = String(Boolean(entry.external));
+        runtimeStyles.set(item, "--command-item-index", index);
         if (entry.external) {
           item.target = "_blank";
           item.rel = "noreferrer";
+          item.classList.add("is-external");
         }
-        item.querySelector("[data-command-result-icon]").innerHTML = iconNodes.get(entry.kind) || iconNodes.get("post") || "";
-        item.querySelector("[data-command-result-title]").textContent = entry.title;
-        item.querySelector("[data-command-result-description]").textContent = entry.description;
-        item.querySelector("[data-command-result-group]").textContent = entry.group;
+        const iconRoot = item.querySelector("[data-command-result-icon]");
+        const icon = iconNodes.get(entry.kind) || iconNodes.get("post");
+        iconRoot?.replaceChildren(...(icon ? [icon.cloneNode(true)] : []));
+        appendHighlightedText(item.querySelector("[data-command-result-title]"), entry.title, parsedQuery.terms);
+        appendHighlightedText(item.querySelector("[data-command-result-description]"), entry.description, parsedQuery.terms);
+        item.querySelector("[data-command-result-group]").textContent = recentIds.has(entry.id) && !parsedQuery.query
+          ? `最近 · ${entry.group}`
+          : entry.group;
         item.querySelector("[data-command-result-extra]").textContent = entry.meta || (entry.external ? "GitHub" : "站内");
-        item.addEventListener("mouseenter", () => setSelectedIndex(index));
-        item.addEventListener("click", () => saveRecentEntry(entry));
+        onPage(item, "mouseenter", () => setSelectedIndex(index));
+        onPage(item, "focus", () => setSelectedIndex(index));
+        onPage(item, "click", () => {
+          saveRecentEntry(entry);
+          closeCommandPalette();
+        });
         resultsRoot.appendChild(item);
         activeItems.push(item);
       });
 
+      clearButton.hidden = !parsedQuery.rawQuery;
+      clearRecentButton.hidden = readRecentIds().length === 0;
       if (statusNode) {
-        if (!query) statusNode.textContent = matches.length ? "常用入口已就绪。" : "输入关键词开始检索。";
-        else statusNode.textContent = matches.length ? `找到 ${matches.length} 条结果。` : "没有匹配结果。";
+        const scopeLabel = filterLabels.get(parsedQuery.kind) || "全部";
+        if (!parsedQuery.query) statusNode.textContent = `${scopeLabel} · ${matches.length} 项推荐`;
+        else statusNode.textContent = matches.length ? `${scopeLabel}内找到 ${matches.length} 条结果` : `${scopeLabel}内没有匹配结果`;
       }
 
       setSelectedIndex(0);
     };
 
+    const setActiveFilter = (kind) => {
+      activeFilter = filterLabels.has(kind) ? kind : "all";
+      filterButtons.forEach((button) => {
+        const active = button.dataset.commandFilter === activeFilter;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      renderResults();
+      void ensureCommandIndex();
+      input?.focus({ preventScroll: true });
+    };
+
     const openCommandPalette = () => {
-      if (!commandPalette.hidden) return;
+      if (!commandPalette.hidden && !commandPalette.classList.contains("is-closing")) return;
+      window.clearTimeout(closeTimer);
       lastFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       commandPalette.hidden = false;
+      commandPalette.classList.remove("is-closing");
       document.documentElement.classList.add("command-palette-open");
+      input?.setAttribute("aria-expanded", "true");
       renderResults();
+      void ensureCommandIndex();
       window.setTimeout(() => input?.focus({ preventScroll: true }), reduceMotion ? 0 : 40);
     };
 
-    const closeCommandPalette = () => {
-      if (commandPalette.hidden) return;
+    const finishCloseCommandPalette = () => {
       commandPalette.hidden = true;
+      commandPalette.classList.remove("is-closing");
       document.documentElement.classList.remove("command-palette-open");
       input.value = "";
+      input?.setAttribute("aria-expanded", "false");
       lastFocused?.focus?.({ preventScroll: true });
       lastFocused = null;
+    };
+
+    const closeCommandPalette = () => {
+      if (commandPalette.hidden || commandPalette.classList.contains("is-closing")) return;
+      if (reduceMotion) {
+        finishCloseCommandPalette();
+        return;
+      }
+      // hidden 会立即切断 CSS 动画，因此先挂退场状态，等纸张与遮罩收起后再真正隐藏。
+      commandPalette.classList.add("is-closing");
+      closeTimer = window.setTimeout(finishCloseCommandPalette, 180);
     };
 
     const openSelected = () => {
@@ -231,10 +414,21 @@
       onPage(button, "click", closeCommandPalette);
     });
     onPage(input, "input", renderResults);
-    onPage(commandPalette, "click", (event) => {
-      if (event.target?.matches?.("[data-command-close]")) closeCommandPalette();
+    onPage(clearButton, "click", () => {
+      input.value = "";
+      renderResults();
+      input.focus({ preventScroll: true });
+    });
+    onPage(clearRecentButton, "click", () => {
+      storage.remove(recentStorageKey);
+      renderResults();
+      input?.focus({ preventScroll: true });
+    });
+    filterButtons.forEach((button) => {
+      onPage(button, "click", () => setActiveFilter(button.dataset.commandFilter));
     });
     onPage(document, "contextmenu", (event) => {
+      if (!isCustomCursorEnabled()) return;
       const target = event.target;
       const editableTarget =
         target instanceof HTMLInputElement ||
@@ -281,16 +475,30 @@
         closeCommandPalette();
       } else if (event.key === "ArrowDown") {
         event.preventDefault();
-        setSelectedIndex(selectedIndex + 1);
+        setSelectedIndex(selectedIndex + 1, true);
       } else if (event.key === "ArrowUp") {
         event.preventDefault();
-        setSelectedIndex(selectedIndex - 1);
-      } else if (event.key === "Enter") {
+        setSelectedIndex(selectedIndex - 1, true);
+      } else if (event.key === "Enter" && !target?.closest?.("button")) {
         event.preventDefault();
         openSelected();
+      } else if (event.key === "Tab") {
+        const focusable = [...commandPalette.querySelectorAll('button:not([hidden]), input, a[href]')]
+          .filter((node) => node instanceof HTMLElement && node.offsetParent !== null);
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     });
     addPageCleanup(() => {
+      window.clearTimeout(closeTimer);
       document.documentElement.classList.remove("command-palette-open");
     });
   }
@@ -315,15 +523,15 @@
 
     let done = false;
     const startTime = Date.now();
-    const minShowMs = 1800;
-    const maxShowMs = 8000;
+    const minShowMs = 300;
+    const maxShowMs = 2500;
     const progressBar = routeSplash.querySelector("[data-splash-progress-bar]");
     const commandText = routeSplash.querySelector("[data-splash-cmd]");
 
     const setProgress = (loaded, total) => {
       if (!progressBar) return;
       const progress = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 100;
-      progressBar.style.width = `${progress}%`;
+      runtimeStyles.set(progressBar, "width", `${progress}%`);
     };
 
     const finish = () => {
@@ -358,43 +566,9 @@
         return;
       }
 
-      image.addEventListener("load", settle, { once: true });
-      image.addEventListener("error", resolve, { once: true });
+      onPage(image, "load", settle, { once: true });
+      onPage(image, "error", resolve, { once: true });
     });
-
-    const waitForImageUrl = (url) => new Promise((resolve) => {
-      const image = new Image();
-      image.onload = () => {
-        if (typeof image.decode === "function") image.decode().then(resolve, resolve);
-        else resolve();
-      };
-      image.onerror = resolve;
-      image.src = url;
-    });
-
-    const collectBackgroundUrls = () => {
-      const urls = new Set();
-      const homeShell = document.querySelector(".home-shell");
-      if (!homeShell) return urls;
-
-      // 首页首屏背景是 CSS background-image，不在 <img> 列表里；这里显式纳入等待，避免进入后再逐行显示。
-      const backgroundCandidates = homeShell.querySelectorAll(".hero-section, .home-layer, .home-next, [style]");
-      backgroundCandidates.forEach((element) => {
-        const backgroundImage = window.getComputedStyle(element).backgroundImage;
-        if (!backgroundImage || backgroundImage === "none") return;
-
-        const matches = backgroundImage.matchAll(/url\(["']?([^"')]+)["']?\)/g);
-        for (const match of matches) {
-          try {
-            urls.add(new URL(match[1], window.location.href).href);
-          } catch {
-            // 忽略不可解析的 CSS url，避免个别资源破坏欢迎层退出。
-          }
-        }
-      });
-
-      return urls;
-    };
 
     const trackHomeResources = () => {
       const homeShell = document.querySelector(".home-shell");
@@ -402,13 +576,10 @@
       let loaded = 0;
 
       if (homeShell) {
-        homeShell.querySelectorAll("img").forEach((image) => {
+        homeShell.querySelectorAll("[data-splash-critical]").forEach((image) => {
           waits.push(waitForImageElement(image));
         });
 
-        collectBackgroundUrls().forEach((url) => {
-          waits.push(waitForImageUrl(url));
-        });
       }
 
       const total = waits.length;
@@ -463,7 +634,6 @@
     let layerEndLockTimer = 0;
     let footerRevealTimer = 0;
     let footerRetractTimer = 0;
-    let footerWasRevealed = false;
     let layerEndLocked = false;
 
     const getLayerScrollRange = () => {
@@ -496,8 +666,8 @@
       const split = stageHeight * (1 - progress);
 
       setPastHeroState(progress > 0.56);
-      homeLayerStage.style.setProperty("--home-layer-progress", progress.toFixed(3));
-      homeLayerStage.style.setProperty("--home-layer-split-y", `${split.toFixed(2)}px`);
+      runtimeStyles.set(homeLayerStage, "--home-layer-progress", progress.toFixed(3));
+      runtimeStyles.set(homeLayerStage, "--home-layer-split-y", `${split.toFixed(2)}px`);
     };
 
     const requestHomeLayerReveal = () => {
@@ -509,7 +679,6 @@
       const footerRevealTop = range + 28;
       const footerRevealed = window.scrollY > footerRevealTop;
       if (!footerRevealed) {
-        footerWasRevealed = false;
         document.body.classList.remove("is-home-footer-visible");
         window.clearTimeout(footerRevealTimer);
         window.clearTimeout(footerRetractTimer);
@@ -521,14 +690,12 @@
         window.clearTimeout(footerRevealTimer);
         footerRevealTimer = window.setTimeout(() => {
           if (window.scrollY <= footerRevealTop) return;
-          footerWasRevealed = true;
           document.body.classList.add("is-home-footer-visible");
           resetFooterRetractTimer();
         }, reduceMotion ? 0 : 220);
         return;
       }
 
-      footerWasRevealed = true;
       window.clearTimeout(footerRetractTimer);
       footerRetractTimer = window.setTimeout(() => {
         if (window.scrollY <= footerRevealTop) return;
@@ -619,10 +786,10 @@
         feedPointerFrame = 0;
       }
       labFeed.classList.remove("is-pointer-active");
-      labFeed.style.setProperty("--feed-pointer-x", "0");
-      labFeed.style.setProperty("--feed-pointer-y", "0");
-      labFeed.style.setProperty("--feed-spot-x", "50%");
-      labFeed.style.setProperty("--feed-spot-y", "44%");
+      runtimeStyles.set(labFeed, "--feed-pointer-x", "0");
+      runtimeStyles.set(labFeed, "--feed-pointer-y", "0");
+      runtimeStyles.set(labFeed, "--feed-spot-x", "50%");
+      runtimeStyles.set(labFeed, "--feed-spot-y", "44%");
     };
 
     const syncFeedPointer = () => {
@@ -636,10 +803,10 @@
 
       // 标签墙的物理坐标由下方脚本写入 transform，这里只同步 CSS 变量做轻量视差和光斑。
       labFeed.classList.add("is-pointer-active");
-      labFeed.style.setProperty("--feed-pointer-x", ((x - 0.5) * 2).toFixed(3));
-      labFeed.style.setProperty("--feed-pointer-y", ((y - 0.5) * 2).toFixed(3));
-      labFeed.style.setProperty("--feed-spot-x", `${Math.round(x * 100)}%`);
-      labFeed.style.setProperty("--feed-spot-y", `${Math.round(y * 100)}%`);
+      runtimeStyles.set(labFeed, "--feed-pointer-x", ((x - 0.5) * 2).toFixed(3));
+      runtimeStyles.set(labFeed, "--feed-pointer-y", ((y - 0.5) * 2).toFixed(3));
+      runtimeStyles.set(labFeed, "--feed-spot-x", `${Math.round(x * 100)}%`);
+      runtimeStyles.set(labFeed, "--feed-spot-y", `${Math.round(y * 100)}%`);
     };
 
     onPage(labFeed, "pointermove", (event) => {
@@ -667,7 +834,7 @@
       const itemCount = links.length + (commandTrigger ? 1 : 0);
       const linkWidth = links.length * 132 + (commandTrigger ? 118 : 0);
       const width = Math.min(window.innerWidth - 128, Math.ceil(linkWidth + gap * Math.max(0, itemCount - 1) + 68));
-      navPill.style.setProperty("--home-nav-open-width", `${Math.max(width, 320)}px`);
+      runtimeStyles.set(navPill, "--home-nav-open-width", `${Math.max(width, 320)}px`);
     };
 
     const openNav = () => {
@@ -709,7 +876,6 @@
       onPage(node, "mouseenter", openNav);
     });
     onPage(document, "pointermove", requestNavPointerSync, { passive: true });
-    onPage(document, "mousemove", requestNavPointerSync, { passive: true });
     onPage(navHeader, "focusin", openNav);
     onPage(navHeader, "focusout", closeNav);
     syncNavMetrics();
@@ -763,7 +929,7 @@
     };
 
     const tick = () => {
-      if (!pageAlive || !output || reduceMotion || commands.length === 0) return;
+      if (scope.disposed || !output || reduceMotion || commands.length === 0) return;
 
       const current = commands[commandIndex];
       output.textContent = current.slice(0, charIndex);
@@ -812,7 +978,7 @@
       let isDeleting = false;
 
       const write = () => {
-        if (!pageAlive || !isTerminalOpen) return;
+        if (scope.disposed || !isTerminalOpen) return;
 
         const current = shuffledLines[lineIndex];
         terminalTyped.textContent = current.slice(0, letterIndex);
@@ -899,8 +1065,8 @@
       );
     };
 
-    terminal.addEventListener("click", openTerminalWindow);
-    terminal.addEventListener("keydown", (event) => {
+    onPage(terminal, "click", openTerminalWindow);
+    onPage(terminal, "keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
       openTerminalWindow();
@@ -911,7 +1077,7 @@
     });
 
     onPage(document, "contextmenu", (event) => {
-      if (!isTerminalOpen) return;
+      if (!isTerminalOpen || !isCustomCursorEnabled()) return;
       event.preventDefault();
       event.stopPropagation();
       closeTerminalWindow();
@@ -924,7 +1090,7 @@
       window.clearTimeout(terminalCloseTimer);
     });
 
-    terminalAvatar?.addEventListener("click", () => {
+    onPage(terminalAvatar, "click", () => {
       bubbleIndex = (bubbleIndex + 1 + Math.floor(Math.random() * (terminalBubbleTexts.length - 1))) % terminalBubbleTexts.length;
       if (terminalBubble) {
         terminalBubble.textContent = terminalBubbleTexts[bubbleIndex];
@@ -941,23 +1107,117 @@
 
   const dialog = document.querySelector("[data-announcement-dialog]");
   const openButton = document.querySelector("[data-announcement-open]");
-  openButton?.addEventListener("click", () => {
+  onPage(openButton, "click", () => {
     if (dialog instanceof HTMLDialogElement) dialog.showModal();
   });
 
   const runtimeNode = document.querySelector("[data-site-runtime]");
   if (runtimeNode && !runtimeNode.dataset.ariaRuntimeReady) {
     runtimeNode.dataset.ariaRuntimeReady = "true";
-    const runtimeStart = new Date(runtimeNode.dataset.runtimeStart || "2026-05-21T00:00:00+08:00").getTime();
+    const runtimeStart = new Date(runtimeNode.dataset.runtimeStart || "2026-05-21T00:00:00+08:00");
 
     const syncRuntime = () => {
-      const distance = Math.max(0, Date.now() - runtimeStart);
-      const days = Math.ceil(distance / (1000 * 60 * 60 * 24));
+      const days = getRuntimeDays(runtimeStart);
       runtimeNode.textContent = `${days} 天`;
     };
 
     syncRuntime();
-    window.setInterval(syncRuntime, 1000 * 60 * 60);
+    const runtimeTimer = window.setInterval(syncRuntime, 1000 * 60 * 60);
+    addPageCleanup(() => {
+      window.clearInterval(runtimeTimer);
+      runtimeNode.removeAttribute("data-aria-runtime-ready");
+    });
+  }
+
+  document.querySelectorAll("[data-runtime-days]").forEach((node) => {
+    const start = new Date(node.dataset.runtimeStart || "2026-05-21T00:00:00+08:00");
+    node.textContent = `${getRuntimeDays(start).toLocaleString("zh-CN")} 天`;
+  });
+  document.querySelectorAll("[data-latest-activity][data-activity-date]").forEach((node) => {
+    const activityDate = new Date(node.dataset.activityDate || "");
+    if (!Number.isNaN(activityDate.valueOf())) node.textContent = formatRelativeActivity(activityDate);
+  });
+  document.querySelectorAll("[data-current-year]").forEach((node) => {
+    node.textContent = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Shanghai",
+      year: "numeric",
+    }).format(new Date());
+  });
+
+  const calendarRoot = document.querySelector("[data-blog-calendar]");
+  if (calendarRoot) {
+    const title = calendarRoot.querySelector("[data-calendar-title]");
+    const grid = calendarRoot.querySelector("[data-calendar-grid]");
+    let postDates = [];
+    try {
+      const values = JSON.parse(calendarRoot.dataset.postDates || "[]");
+      if (Array.isArray(values)) postDates = values.map((value) => new Date(value)).filter((date) => !Number.isNaN(date.valueOf()));
+    } catch {
+      postDates = [];
+    }
+    const calendar = buildCalendarModel(postDates);
+    if (title) title.textContent = calendar.title;
+    if (grid) {
+      grid.replaceChildren(...calendar.cells.map((cell) => {
+        if (!cell.day) {
+          const blank = document.createElement("span");
+          blank.className = "blog-calendar__blank";
+          blank.setAttribute("aria-hidden", "true");
+          return blank;
+        }
+        const day = document.createElement("time");
+        day.className = "blog-calendar__day";
+        if (cell.isToday) day.classList.add("is-today");
+        if (cell.hasPost) day.classList.add("has-post");
+        day.dateTime = cell.key || "";
+        day.textContent = String(cell.day);
+        return day;
+      }));
+    }
+  }
+
+  const giscusRoot = document.querySelector("[data-giscus-root]");
+  if (giscusRoot && !giscusRoot.dataset.giscusLoaded) {
+    const loadGiscus = () => {
+      if (giscusRoot.dataset.giscusLoaded) return;
+      giscusRoot.dataset.giscusLoaded = "true";
+
+      const script = document.createElement("script");
+      // 更换脚本来源时必须同步 vercel.json 与 public/_headers 的 CSP script-src 白名单。
+      script.src = "https://giscus.app/client.js";
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      [
+        "repo",
+        "repoId",
+        "category",
+        "categoryId",
+        "mapping",
+        "strict",
+        "reactionsEnabled",
+        "emitMetadata",
+        "inputPosition",
+        "theme",
+        "lang",
+        "loading",
+      ].forEach((key) => {
+        const value = giscusRoot.dataset[key];
+        if (value !== undefined) script.dataset[key] = value;
+      });
+      giscusRoot.appendChild(script);
+    };
+
+    // 评论区接近视口时才下载第三方脚本，避免它与文章首屏资源竞争带宽和主线程。
+    const giscusObserver = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        giscusObserver.disconnect();
+        loadGiscus();
+      },
+      { rootMargin: "600px 0px" },
+    );
+    giscusObserver.observe(giscusRoot);
+    addPageCleanup(() => giscusObserver.disconnect());
   }
 
   const sideTools = document.querySelector("[data-side-tools]");
@@ -977,7 +1237,7 @@
       // 只通过点击书签打开完整控制台，避免鼠标经过时误触展开。
       sideTools.classList.toggle("is-pinned", open);
       syncConsoleState();
-      window.localStorage?.setItem("aria-console-pinned", String(open));
+      storage.set("aria-console-pinned", String(open));
     };
 
     const togglePinnedConsole = () => {
@@ -985,7 +1245,7 @@
     };
 
     let pointerHandled = false;
-    consoleTrigger.addEventListener("pointerdown", (event) => {
+    onPage(consoleTrigger, "pointerdown", (event) => {
       if (event.button !== 0) return;
       // 收起态按钮获得焦点会让抽屉先位移，改用 pointerdown 提前处理，避免 click 落空。
       event.preventDefault();
@@ -996,7 +1256,7 @@
       }, 360);
     });
 
-    consoleTrigger.addEventListener("click", (event) => {
+    onPage(consoleTrigger, "click", (event) => {
       if (pointerHandled) {
         event.preventDefault();
         pointerHandled = false;
@@ -1006,18 +1266,23 @@
       togglePinnedConsole();
     });
 
-    document.addEventListener("keydown", (event) => {
+    onPage(document, "keydown", (event) => {
       if (event.key !== "Escape") return;
       if (sideTools.classList.contains("is-pinned")) setPinnedConsole(false);
     });
 
-    document.addEventListener("pointerdown", (event) => {
+    onPage(document, "pointerdown", (event) => {
       if (!sideTools.classList.contains("is-pinned")) return;
       if (sideTools.contains(event.target)) return;
       setPinnedConsole(false);
     });
 
-    setPinnedConsole(window.localStorage?.getItem("aria-console-pinned") === "true");
+    // Dock 节点会被 ClientRouter 持久化，但监听器属于当前 PageScope；切页前清除哨兵，下一页才能重新绑定。
+    addPageCleanup(() => {
+      sideTools.removeAttribute("data-aria-console-ready");
+    });
+
+    setPinnedConsole(storage.get("aria-console-pinned") === "true");
     syncConsoleState();
   }
 
@@ -1073,18 +1338,18 @@
     const sourceFallbackHint = "Meting 暂时没有返回可播放音源，已切回本地曲目。";
     const allowedModes = new Set(["local", "meting"]);
     let tracks = localTracks;
-    let activeMode = window.localStorage?.getItem(modeStorageKey) || defaultMode;
+    let activeMode = storage.get(modeStorageKey) || defaultMode;
     if (!allowedModes.has(activeMode)) activeMode = "local";
     const storedPlayback = (() => {
       try {
-        const payload = JSON.parse(window.localStorage?.getItem(playbackStorageKey) || "{}");
+        const payload = storage.getJSON(playbackStorageKey, {});
         return payload && typeof payload === "object" ? payload : {};
       } catch {
         return {};
       }
     })();
     if (allowedModes.has(storedPlayback.mode)) activeMode = storedPlayback.mode;
-    const storedTrack = Number(window.localStorage?.getItem(`aria-music-track:${activeMode}`));
+    const storedTrack = Number(storage.get(`aria-music-track:${activeMode}`));
     const storedPlaybackIndex = Number(storedPlayback.index);
     const initialTrack = Number.isInteger(storedPlaybackIndex)
       ? storedPlaybackIndex
@@ -1094,12 +1359,15 @@
     let activeIndex = Math.max(0, initialTrack);
     let isSeeking = false;
     let metingLoaded = false;
-    let metingLoading = false;
     let metingTracks = [];
+    let metingGeneration = 0;
+    let metingController = null;
     let sourceNotice = "";
     let lyricEntries = [];
     let activeLyricIndex = -1;
     let lyricRequestId = 0;
+    let detailsTrack = null;
+    let lastPlaybackSaveAt = 0;
     let pendingRestoreTime = Number(storedPlayback.currentTime) || 0;
     let shouldResumePlayback = storedPlayback.playing === true;
 
@@ -1110,11 +1378,6 @@
         .toString()
         .padStart(2, "0");
       return `${minutes}:${rest}`;
-    };
-
-    const firstText = (...values) => {
-      const value = values.find((item) => typeof item === "string" && item.trim());
-      return value?.trim() || "";
     };
 
     const setLyricText = (text) => {
@@ -1151,9 +1414,17 @@
     const fetchLyricText = async (lyricSource) => {
       if (!lyricSource) return "";
       if (/^\s*\[/.test(lyricSource)) return lyricSource;
-      const response = await fetch(lyricSource);
-      const buffer = await response.arrayBuffer();
-      return new TextDecoder("utf-8").decode(buffer);
+      const timeoutController = new AbortController();
+      const timeout = window.setTimeout(() => timeoutController.abort(), 8000);
+      try {
+        const response = await fetch(lyricSource, {
+          signal: AbortSignal.any([scope.signal, timeoutController.signal]),
+          credentials: "omit",
+        });
+        return await readLimitedText(response);
+      } finally {
+        window.clearTimeout(timeout);
+      }
     };
 
     const syncLyric = (currentTime) => {
@@ -1207,7 +1478,7 @@
 
     const renderTrackButtons = () => {
       if (!trackList) return;
-      trackList.innerHTML = "";
+      trackList.replaceChildren();
       tracks.forEach((track, index) => {
         const button = document.createElement("button");
         button.type = "button";
@@ -1219,7 +1490,7 @@
         button.dataset.lyric = track.lyric;
         button.textContent = track.title;
         button.classList.toggle("is-active", index === activeIndex);
-        button.addEventListener("click", () => {
+        onPage(button, "click", () => {
           const shouldPlay = audio instanceof HTMLAudioElement && !audio.paused;
           loadTrack(index, shouldPlay, true);
         });
@@ -1243,18 +1514,21 @@
       toggles.forEach((button) => button.setAttribute("aria-label", playing ? "暂停" : "播放"));
     };
 
-    const savePlaybackState = () => {
+    const savePlaybackState = (force = false) => {
       if (!(audio instanceof HTMLAudioElement)) return;
+      const now = Date.now();
+      if (!force && now - lastPlaybackSaveAt < 5000) return;
+      lastPlaybackSaveAt = now;
       // 全站播放器会随页面切换重新挂载，这里保存最小播放现场，下一页可以接着恢复。
-      window.localStorage?.setItem(
+      storage.setJSON(
         playbackStorageKey,
-        JSON.stringify({
+        {
           mode: activeMode,
           index: activeIndex,
           currentTime: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
           playing: !audio.paused && !audio.ended,
-          updatedAt: Date.now(),
-        }),
+          updatedAt: now,
+        },
       );
     };
 
@@ -1273,15 +1547,19 @@
       countNodes.forEach((node) => {
         node.textContent = `${activeIndex + 1} / ${tracks.length}`;
       });
-      coverNodes.forEach((node) => {
-        const cover = track.cover || "";
-        node.classList.toggle("has-cover", Boolean(cover));
-        if (cover) node.style.setProperty("--music-cover-image", `url("${cover}")`);
-        else node.style.removeProperty("--music-cover-image");
-      });
-      loadLyrics(track);
+      // 封面和歌词不参与首屏渲染；首次播放或切歌时再请求，避免隐藏 Dock 抢占带宽。
+      if (shouldLoad && detailsTrack !== track) {
+        detailsTrack = track;
+        coverNodes.forEach((node) => {
+          const cover = track.cover || "";
+          node.classList.toggle("has-cover", Boolean(cover));
+          if (cover) runtimeStyles.set(node, "--music-cover-image", `url("${cover}")`);
+          else runtimeStyles.remove(node, "--music-cover-image");
+        });
+        loadLyrics(track);
+      }
       tracks.forEach((item) => item.node?.classList.toggle("is-active", item === track));
-      window.localStorage?.setItem(`aria-music-track:${activeMode}`, String(activeIndex));
+      storage.set(`aria-music-track:${activeMode}`, String(activeIndex));
 
       // 初始渲染只同步曲目信息；用户点击播放或切歌后才请求音频资源，减轻首页首屏负担。
       if (shouldLoad && audio.getAttribute("src") !== src) {
@@ -1305,68 +1583,88 @@
       }
     };
 
+    const cancelMetingRequest = () => {
+      metingGeneration += 1;
+      metingController?.abort();
+      metingController = null;
+      // 旧请求的 finally 会因代次失效而跳过清理，主动取消时必须立即恢复非加载态。
+      musicPlayer.classList.remove("is-source-loading");
+    };
+
+    const fallbackToLocal = () => {
+      sourceNotice = sourceFallbackHint;
+      activeMode = "local";
+      tracks = localTracks;
+      storage.set(modeStorageKey, activeMode);
+      renderTrackButtons();
+      syncModeUi();
+      loadTrack(0, false, false);
+    };
+
+    // 代次是请求竞态的唯一写入令牌：只有最新请求能更新界面、触发回退或清除加载态。
     const fetchMetingTracks = async () => {
       if (metingLoaded) {
         tracks = metingTracks;
-        activeIndex = Number(window.localStorage?.getItem("aria-music-track:meting")) || 0;
+        activeIndex = Number(storage.get("aria-music-track:meting")) || 0;
         renderTrackButtons();
         loadTrack(activeIndex, false, false);
         sourceNotice = "";
         syncModeUi();
         return true;
       }
-      if (metingLoading) return false;
       const url = buildMetingUrl();
       if (!url) return false;
-      metingLoading = true;
+      const generation = metingGeneration + 1;
+      metingGeneration = generation;
+      metingController?.abort();
+      const controller = new AbortController();
+      metingController = controller;
+      let timedOut = false;
+      const timeout = window.setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, 8000);
       sourceNotice = "";
       musicPlayer.classList.add("is-source-loading");
       if (sourceHint) sourceHint.textContent = sourceLoadingHints.meting;
       try {
-        const response = await fetch(url);
-        const payload = await response.json();
-        const list = Array.isArray(payload) ? payload : [];
-        const mappedTracks = list
-          .map((item) => ({
-            src: item.url || "",
-            title: firstText(item.title, item.name, item.songname) || "Untitled",
-            artist: firstText(item.author, item.artist, item.artistname) || "Aria-7th Lab",
-            cover: firstText(item.pic, item.cover, item.picture),
-            lyric: firstText(item.lrc, item.lyric),
-            node: null,
-          }))
-          .filter((item) => item.src);
+        const response = await fetch(url, {
+          signal: AbortSignal.any([scope.signal, controller.signal]),
+          credentials: "omit",
+        });
+        const payload = JSON.parse(await readLimitedText(response));
+        const mappedTracks = validateMetingPayload(payload, window.location.href).map((track) => ({
+          ...track,
+          node: null,
+        }));
+        if (scope.disposed || generation !== metingGeneration || activeMode !== "meting") return false;
         if (mappedTracks.length) {
           metingTracks = mappedTracks;
           tracks = metingTracks;
-          activeIndex = Number(window.localStorage?.getItem("aria-music-track:meting")) || 0;
+          activeIndex = Number(storage.get("aria-music-track:meting")) || 0;
           metingLoaded = true;
           sourceNotice = "";
           renderTrackButtons();
           loadTrack(activeIndex, false, false);
           return true;
         } else {
-          sourceNotice = sourceFallbackHint;
-          activeMode = "local";
-          tracks = localTracks;
-          renderTrackButtons();
-          syncModeUi();
-          loadTrack(0, false, false);
+          fallbackToLocal();
           return false;
         }
-      } catch {
-        sourceNotice = sourceFallbackHint;
-        activeMode = "local";
-        tracks = localTracks;
-        renderTrackButtons();
-        syncModeUi();
-        loadTrack(0, false, false);
+      } catch (error) {
+        if (scope.disposed || generation !== metingGeneration || (!timedOut && error?.name === "AbortError")) {
+          return false;
+        }
+        fallbackToLocal();
         return false;
       } finally {
-        metingLoading = false;
-        musicPlayer.classList.remove("is-source-loading");
-        if (activeMode === "meting" && !sourceNotice && sourceHint) {
-          sourceHint.textContent = sourceHints.meting;
+        window.clearTimeout(timeout);
+        if (generation === metingGeneration) {
+          if (metingController === controller) metingController = null;
+          musicPlayer.classList.remove("is-source-loading");
+          if (activeMode === "meting" && !sourceNotice && sourceHint) {
+            sourceHint.textContent = sourceHints.meting;
+          }
         }
       }
     };
@@ -1374,19 +1672,20 @@
     const setMusicMode = async (mode) => {
       if (!(audio instanceof HTMLAudioElement)) return;
       if (mode === activeMode) return;
+      cancelMetingRequest();
       audio.pause();
       audio.removeAttribute("src");
       sourceNotice = "";
       tracks = mode === "meting" ? tracks : localTracks;
       activeMode = mode;
-      window.localStorage?.setItem(modeStorageKey, activeMode);
+      storage.set(modeStorageKey, activeMode);
 
       if (activeMode === "meting") {
         const loaded = await fetchMetingTracks();
-        if (!loaded) window.localStorage?.setItem(modeStorageKey, activeMode);
+        if (!loaded) storage.set(modeStorageKey, activeMode);
       } else {
         tracks = localTracks;
-        activeIndex = Number(window.localStorage?.getItem("aria-music-track:local")) || 0;
+        activeIndex = Number(storage.get("aria-music-track:local")) || 0;
         renderTrackButtons();
         loadTrack(activeIndex, false, false);
       }
@@ -1411,7 +1710,7 @@
       savePlaybackState();
     };
 
-    toggles.forEach((button) => button.addEventListener("click", () => {
+    toggles.forEach((button) => onPage(button, "click", () => {
       if (!(audio instanceof HTMLAudioElement)) return;
 
       if (audio.paused) {
@@ -1427,17 +1726,17 @@
       }
     }));
 
-    prevButton?.addEventListener("click", () => {
+    onPage(prevButton, "click", () => {
       const shouldPlay = audio instanceof HTMLAudioElement && !audio.paused;
       loadTrack(activeIndex - 1, shouldPlay);
     });
 
-    nextButton?.addEventListener("click", () => {
+    onPage(nextButton, "click", () => {
       const shouldPlay = audio instanceof HTMLAudioElement && !audio.paused;
       loadTrack(activeIndex + 1, shouldPlay);
     });
 
-    sourceToggle?.addEventListener("click", () => {
+    onPage(sourceToggle, "click", () => {
       if (!sourcePanel) return;
       const isHidden = sourcePanel.hasAttribute("hidden");
       sourcePanel.toggleAttribute("hidden", !isHidden);
@@ -1448,7 +1747,7 @@
       if (!playlistToggle || !playlistPanel) return;
       window.clearTimeout(Number(playlistPanel.dataset.closeTimer || 0));
       playlistToggle.setAttribute("aria-expanded", String(open));
-      window.localStorage?.setItem("aria-music-playlist-open", String(open));
+      storage.set("aria-music-playlist-open", String(open));
 
       if (open) {
         playlistPanel.hidden = false;
@@ -1466,17 +1765,17 @@
       playlistPanel.dataset.closeTimer = String(closeTimer);
     };
 
-    playlistToggle?.addEventListener("click", () => {
+    onPage(playlistToggle, "click", () => {
       setPlaylistOpen(playlistToggle.getAttribute("aria-expanded") !== "true");
     });
 
     modeButtons.forEach((button) => {
-      button.addEventListener("click", () => {
+      onPage(button, "click", () => {
         setMusicMode(button.dataset.musicMode || "local");
       });
     });
 
-    progress?.addEventListener("input", () => {
+    onPage(progress, "input", () => {
       isSeeking = true;
       if (!(audio instanceof HTMLAudioElement) || !(progress instanceof HTMLInputElement)) return;
       const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
@@ -1487,7 +1786,7 @@
       }
     });
 
-    progress?.addEventListener("change", () => {
+    onPage(progress, "change", () => {
       if (!(audio instanceof HTMLAudioElement) || !(progress instanceof HTMLInputElement)) return;
       const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
       if (duration > 0) audio.currentTime = (Number(progress.value) / 100) * duration;
@@ -1495,21 +1794,21 @@
       updateProgress();
     });
 
-    volume?.addEventListener("input", () => {
+    onPage(volume, "input", () => {
       if (audio instanceof HTMLAudioElement && volume instanceof HTMLInputElement) {
         audio.volume = Number(volume.value);
-        window.localStorage?.setItem("aria-music-volume", volume.value);
+        storage.set("aria-music-volume", volume.value);
       }
     });
 
-    audio?.addEventListener("play", syncPlayingState);
-    audio?.addEventListener("play", savePlaybackState);
-    audio?.addEventListener("pause", () => {
+    onPage(audio, "play", syncPlayingState);
+    onPage(audio, "play", () => savePlaybackState(true));
+    onPage(audio, "pause", () => {
       syncPlayingState();
-      savePlaybackState();
+      savePlaybackState(true);
     });
-    audio?.addEventListener("ended", () => loadTrack(activeIndex + 1, true));
-    audio?.addEventListener("loadedmetadata", () => {
+    onPage(audio, "ended", () => loadTrack(activeIndex + 1, true));
+    onPage(audio, "loadedmetadata", () => {
       if (audio instanceof HTMLAudioElement && pendingRestoreTime > 0) {
         const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
         audio.currentTime = duration > 0 ? Math.min(pendingRestoreTime, Math.max(0, duration - 0.4)) : pendingRestoreTime;
@@ -1517,16 +1816,22 @@
       }
       updateProgress();
     });
-    audio?.addEventListener("timeupdate", updateProgress);
-    window.addEventListener("pagehide", savePlaybackState);
+    onPage(audio, "timeupdate", updateProgress);
+    onPage(window, "pagehide", () => savePlaybackState(true));
+
+    addPageCleanup(() => {
+      cancelMetingRequest();
+      savePlaybackState(true);
+      musicRoot.removeAttribute("data-aria-music-ready");
+    });
 
     if (audio instanceof HTMLAudioElement && volume instanceof HTMLInputElement) {
-      const storedVolume = window.localStorage?.getItem("aria-music-volume");
+      const storedVolume = storage.get("aria-music-volume");
       if (storedVolume !== null) volume.value = storedVolume;
       audio.volume = Number(volume.value);
     }
     renderTrackButtons();
-    setPlaylistOpen(window.localStorage?.getItem("aria-music-playlist-open") === "true");
+    setPlaylistOpen(storage.get("aria-music-playlist-open") === "true");
     syncModeUi();
     if (activeMode === "meting") {
       fetchMetingTracks().finally(() => {
@@ -1546,7 +1851,7 @@
         ? homeLayerStage.parentElement?.scrollHeight - window.innerHeight
         : document.documentElement.scrollHeight - window.innerHeight;
       const progress = maxScroll > 0 ? Math.min(window.scrollY / maxScroll, 1) : 0;
-      scrollRail.style.setProperty("--scroll-progress", progress.toFixed(3));
+      runtimeStyles.set(scrollRail, "--scroll-progress", progress.toFixed(3));
     };
 
     updateScrollRail();
@@ -1567,7 +1872,7 @@
       blogFilter.classList.toggle("is-expanded", expanded);
       topicToggle?.setAttribute("aria-expanded", String(expanded));
       if (topicToggleLabel) topicToggleLabel.textContent = expanded ? "收起" : "展开全部";
-      window.localStorage?.setItem(topicExpandStorageKey, String(expanded));
+      storage.set(topicExpandStorageKey, String(expanded));
     };
 
     const syncTopicFilter = (topic, shouldUpdateUrl = true) => {
@@ -1598,16 +1903,16 @@
     };
 
     filterButtons.forEach((button) => {
-      button.addEventListener("click", () => {
+      onPage(button, "click", () => {
         syncTopicFilter(button.dataset.blogTopicFilter || "all");
       });
     });
 
-    topicToggle?.addEventListener("click", () => {
+    onPage(topicToggle, "click", () => {
       setTopicsExpanded(!blogFilter.classList.contains("is-expanded"));
     });
 
-    setTopicsExpanded(window.localStorage?.getItem(topicExpandStorageKey) === "true");
+    setTopicsExpanded(storage.get(topicExpandStorageKey) === "true");
     const params = new URLSearchParams(window.location.search);
     syncTopicFilter(params.get("topic") || params.get("tag") || "all", false);
   }
@@ -1637,10 +1942,10 @@
 
     const applyArticleOpacity = (value) => {
       const opacity = Math.min(78, Math.max(30, Number(value) || 58));
-      articleFrame.style.setProperty("--article-acrylic-opacity", (opacity / 100).toFixed(2));
+      runtimeStyles.set(articleFrame, "--article-acrylic-opacity", (opacity / 100).toFixed(2));
       if (opacityInput instanceof HTMLInputElement) opacityInput.value = String(opacity);
       if (opacityValue) opacityValue.textContent = `${opacity}%`;
-      window.localStorage?.setItem(opacityStorageKey, String(opacity));
+      storage.set(opacityStorageKey, String(opacity));
     };
 
     const applyArticleMode = (mode) => {
@@ -1653,48 +1958,81 @@
         button.classList.toggle("is-active", active);
         button.setAttribute("aria-pressed", String(active));
       });
-      window.localStorage?.setItem(storageKey, nextMode);
+      storage.set(storageKey, nextMode);
     };
 
     modeButtons.forEach((button) => {
-      button.addEventListener("click", () => {
+      onPage(button, "click", () => {
         applyArticleMode(button.dataset.articleMode || "acrylic");
       });
     });
 
-    opacityInput?.addEventListener("input", () => {
+    onPage(opacityInput, "input", () => {
       if (!(opacityInput instanceof HTMLInputElement)) return;
       applyArticleOpacity(opacityInput.value);
       applyArticleMode("acrylic");
     });
 
-    applyArticleOpacity(window.localStorage?.getItem(opacityStorageKey) || "58");
-    applyArticleMode(window.localStorage?.getItem(storageKey) || "acrylic");
+    applyArticleOpacity(storage.get(opacityStorageKey) || "58");
+    applyArticleMode(storage.get(storageKey) || "acrylic");
 
     if (progress) {
-      const syncArticleProgress = () => {
-        const start = articleFrame.offsetTop;
-        const end = start + articleFrame.scrollHeight - window.innerHeight;
-        const ratio = end > start ? Math.min(Math.max((window.scrollY - start) / (end - start), 0), 1) : 0;
-        const percent = Math.round(ratio * 100);
-        progress.style.setProperty("--article-progress", ratio.toFixed(3));
-        if (progressValue) progressValue.textContent = `${percent}%`;
+      let articleTop = 0;
+      let articleHeight = 0;
+      let viewportHeight = 0;
+      let progressFrame = 0;
 
-        if (headingTargets.length) {
-          let active = headingTargets[0];
-          for (const entry of headingTargets) {
-            if (entry.heading.getBoundingClientRect().top <= 140) active = entry;
-            else break;
-          }
-          headingTargets.forEach((entry) => {
-            entry.item?.classList.toggle("is-active", entry === active);
-          });
-        }
+      const renderArticleProgress = () => {
+        progressFrame = 0;
+        const ratio = calculateReadingProgress(window.scrollY, articleTop, articleHeight, viewportHeight);
+        const percent = Math.round(ratio * 100);
+        runtimeStyles.set(progress, "--article-progress", ratio.toFixed(3));
+        if (progressValue) progressValue.textContent = `${percent}%`;
       };
 
-      syncArticleProgress();
-      onPage(window, "scroll", syncArticleProgress, { passive: true });
-      onPage(window, "resize", syncArticleProgress);
+      const queueArticleProgress = () => {
+        if (progressFrame) return;
+        progressFrame = window.requestAnimationFrame(renderArticleProgress);
+      };
+
+      const measureArticle = () => {
+        articleTop = articleFrame.offsetTop;
+        articleHeight = articleFrame.scrollHeight;
+        viewportHeight = window.innerHeight;
+        queueArticleProgress();
+      };
+
+      const setActiveHeading = (activeIndex) => {
+        headingTargets.forEach((entry, index) => {
+          entry.item?.classList.toggle("is-active", index === activeIndex);
+        });
+      };
+
+      if (headingTargets.length && "IntersectionObserver" in window) {
+        let activeIndex = 0;
+        setActiveHeading(activeIndex);
+        const headingObserver = new IntersectionObserver((entries) => {
+          for (const observed of entries) {
+            const index = headingTargets.findIndex((entry) => entry.heading === observed.target);
+            if (index < 0) continue;
+            if (observed.isIntersecting || observed.boundingClientRect.top < 140) activeIndex = index;
+          }
+          setActiveHeading(activeIndex);
+        }, { rootMargin: "-120px 0px -68%", threshold: [0, 1] });
+        headingTargets.forEach((entry) => headingObserver.observe(entry.heading));
+        addPageCleanup(() => headingObserver.disconnect());
+      }
+
+      if ("ResizeObserver" in window) {
+        const resizeObserver = new ResizeObserver(measureArticle);
+        resizeObserver.observe(articleFrame);
+        addPageCleanup(() => resizeObserver.disconnect());
+      }
+
+      measureArticle();
+      onPage(window, "scroll", queueArticleProgress, { passive: true });
+      onPage(window, "resize", measureArticle);
+      addPageCleanup(() => window.cancelAnimationFrame(progressFrame));
     }
   }
 
@@ -1720,6 +2058,7 @@
     let startedAt = 0;
     let settleSince = 0;
     let started = false;
+    let startTimer = 0;
     let resizeTimer = 0;
     const maxAngle = (7 * Math.PI) / 180;
     const tagSlots = [
@@ -1799,7 +2138,11 @@
 
     const renderBodies = () => {
       bodies.forEach((body) => {
-        body.el.style.transform = `translate3d(${body.x}px, ${body.y}px, 0) rotate(${body.angle}rad)`;
+        runtimeStyles.set(
+          body.el,
+          "transform",
+          `translate3d(${body.x}px, ${body.y}px, 0) rotate(${body.angle}rad)`,
+        );
       });
     };
 
@@ -1947,27 +2290,34 @@
       });
     };
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          startPhysics();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.24 },
-    );
+    const schedulePhysics = () => {
+      if (started) return;
+      window.clearTimeout(startTimer);
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const revealPoint = maxScroll * 0.48;
+      if (window.scrollY < revealPoint) return;
 
-    observer.observe(physicsTags);
+      // 标签层被 clip-path 隐藏时 IntersectionObserver 仍可能判定可见；
+      // 改为等第二屏真正揭示且滚动停止后再启动，避免首屏阶段执行隐藏动画。
+      startTimer = window.setTimeout(startPhysics, reduceMotion ? 0 : 180);
+    };
+
+    schedulePhysics();
     addPageCleanup(() => {
-      observer.disconnect();
       window.cancelAnimationFrame(animationId);
+      window.clearTimeout(startTimer);
       window.clearTimeout(resizeTimer);
     });
 
     onPage(window, "scroll", () => {
-      if (!started || physicsTags.classList.contains("is-settled")) return;
-      window.cancelAnimationFrame(animationId);
-      freezeBodies(true);
+      if (!started) {
+        schedulePhysics();
+        return;
+      }
+      if (!physicsTags.classList.contains("is-settled")) {
+        window.cancelAnimationFrame(animationId);
+        freezeBodies(true);
+      }
     }, { passive: true });
 
     onPage(window, "resize", () => {
@@ -1993,9 +2343,11 @@
     const button = counter.querySelector("[data-click-button]");
     let count = 0;
 
-    button?.addEventListener("click", () => {
+    onPage(button, "click", () => {
       count += 1;
       if (countNode) countNode.textContent = String(count);
     });
   }
-})();
+
+  return cleanup;
+};

@@ -13,6 +13,7 @@ const languageTone: Record<string, string> = {
 };
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  timeZone: "Asia/Shanghai",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
@@ -21,7 +22,7 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 
 <BaseLayout title="Works" description="Aria-7th Lab 的 GitHub 项目展示。" bodyClass="inner-page">
   <NavBar compact />
-  <main class="page-frame works-frame" transition:animate="fade">
+  <main class="page-frame works-frame">
     <section class="work-grid work-grid--repos" aria-label="GitHub 项目列表">
       {
         repositories.map((repo, index) => (
