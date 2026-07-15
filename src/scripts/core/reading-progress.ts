@@ -8,4 +8,3 @@ export const calculateReadingProgress = (
   if (end <= start) return 0;
   return Math.min(1, Math.max(0, (scrollY - start) / (end - start)));
 };
-

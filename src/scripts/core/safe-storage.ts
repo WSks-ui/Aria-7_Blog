@@ -66,4 +66,3 @@ export class SafeStorage {
 }
 
 export const createSafeStorage = (provider?: StorageProvider): SafeStorage => new SafeStorage(provider);
-

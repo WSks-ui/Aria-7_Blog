@@ -54,4 +54,3 @@ export const getBlogStats = (
     latestActivityText: formatRelativeActivity(latestActivityDate, now, timeZone),
   };
 };
-
