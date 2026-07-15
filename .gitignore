@@ -2,6 +2,9 @@ node_modules/
 dist/
 .astro/
 .codex-screens/
+coverage/
+playwright-report/
+test-results/
 .env
 .env.*
 *.log

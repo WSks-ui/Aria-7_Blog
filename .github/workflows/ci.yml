@@ -1,0 +1,66 @@
+name: 持续集成
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: 审计、检查与浏览器测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: true
+      TZ: Asia/Shanghai
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: 配置 Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 检查高危依赖漏洞
+        run: npm audit --audit-level=high
+
+      - name: 安装 Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Astro 与 TypeScript 检查
+        run: npm run check
+
+      - name: 运行单元测试
+        run: npm run test:unit
+
+      - name: 构建生产站点
+        run: npm run build
+
+      - name: 运行端到端测试
+        run: npm run test:e2e:ci
+
+      - name: 上传失败诊断
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-failure-${{ github.run_id }}
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
