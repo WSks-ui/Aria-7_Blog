@@ -1,0 +1,20 @@
+/*
+  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' https://giscus.app/client.js; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self' data: https://api.i-meto.com https://*.music.126.net; media-src 'self' https://api.i-meto.com https://*.music.126.net; connect-src 'self' https://api.i-meto.com; frame-src https://giscus.app; font-src 'self'; manifest-src 'self'; worker-src 'none'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  X-XSS-Protection: 0
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), display-capture=(), browsing-topics=()
+  Strict-Transport-Security: max-age=31536000
+
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/images/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/assets/images/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/audio/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
