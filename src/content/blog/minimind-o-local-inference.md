@@ -9,7 +9,7 @@
   - "全模态"
   - "本地推理"
 "category": "技术"
-"cover": "/assets/images/posts/MiniMind-O初体验/cover.png"
+"cover": "/assets/images/posts/MiniMind-O初体验/cover.webp"
 "draft": false
 ---
 
@@ -120,7 +120,7 @@ python web_demo_omni.py --load_from ../ --port 8888
 
 打开 `http://localhost:8888` 就能看到一个聊天界面。
 
-![Gradio 版的实时语音对话界面](/assets/images/posts/MiniMind-O初体验/gradio_ui.png)
+![Gradio 版的实时语音对话界面](/assets/images/posts/MiniMind-O初体验/gradio_ui.webp)
 
 支持文本、上传语音文件、上传图片，模型会回复文本 + 合成语音。还内置了 12 种音色可以切换。
 
@@ -137,7 +137,7 @@ python web_demo.py --load_from ../ --port 7860
 
 打开 `http://localhost:7860/call`，打开摄像头，按住说话键，模型就会实时捕捉视频画面 + 语音输入，然后通过语音回答你
 
-![Flask 版 Web 的视频通话界面，图中摄像头已开启](/assets/images/posts/MiniMind-O初体验/video_call.jpg)
+![Flask 版 Web 的视频通话界面，图中摄像头已开启](/assets/images/posts/MiniMind-O初体验/video_call.webp)
 
 在轻薄本的 **AMD 880M 核显** 上居然也能跑起来，画面捕获和语音交互都很顺畅。一个 0.1B 的模型在核显上做视频通话，还挺魔幻的
 
@@ -147,7 +147,7 @@ python web_demo.py --load_from ../ --port 7860
 
 **测试一：初音未来 × JavaScript 海报**
 
-![初音未来 JavaScript 宣传海报分析](/assets/images/posts/MiniMind-O初体验/image_analysis_miku.png)
+![初音未来 JavaScript 宣传海报分析](/assets/images/posts/MiniMind-O初体验/image_analysis_miku.webp)
 
 输入了一张以初音未来为 IP 的 JavaScript 编程语言宣传海报，AI 生成的
 
@@ -159,7 +159,7 @@ python web_demo.py --load_from ../ --port 7860
 
 **测试二：Linux 作业截图**
 
-![Linux 终端作业截图分析](/assets/images/posts/MiniMind-O初体验/image_analysis_linux.png)
+![Linux 终端作业截图分析](/assets/images/posts/MiniMind-O初体验/image_analysis_linux.webp)
 
 这张明显好一些，能认出是终端界面、命令行操作，大概能描述出有人在执行命令。虽然具体的命令内容和输出描述的不正确，但至少方向对了。
 

@@ -8,7 +8,7 @@
   - "Firefly"
   - "Vercel"
 "category": "杂谈"
-"cover": "/assets/images/posts/博客搭建历程/vercel-deploy.png"
+"cover": "/assets/images/posts/博客搭建历程/vercel-deploy.webp"
 "draft": false
 ---
 
@@ -65,7 +65,7 @@ pnpm dev
 
 选了 **Vercel** 部署。代码推到 GitHub，Vercel 自动就识别出是 Astro 项目开始构建了，省心 (ง •̀_•́)ง
 
-![Vercel 部署控制台](/assets/images/posts/博客搭建历程/vercel-deploy.png)
+![Vercel 部署控制台](/assets/images/posts/博客搭建历程/vercel-deploy.webp)
 
 ## 踩的那些坑
 
@@ -73,7 +73,7 @@ pnpm dev
 
 > 在 Fork 的仓库里改了东西，结果主页绿点图什么都没有...
 
-![缺失的贡献记录](/assets/images/posts/博客搭建历程/github-contributions.png)
+![缺失的贡献记录](/assets/images/posts/博客搭建历程/github-contributions.webp)
 
 **原因**：GitHub 的贡献统计对 Fork 仓库的提交计算很迷，不会立刻显示。
 

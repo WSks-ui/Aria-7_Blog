@@ -10,7 +10,7 @@
   - "JavaScript"
   - "博客"
 "category": "技术"
-"cover": "/assets/images/posts/B站音乐播放器/cover.png"
+"cover": "/assets/images/posts/B站音乐播放器/cover.webp"
 "draft": false
 ---
 
@@ -127,7 +127,7 @@ var state = {
 
 状态全在Manager中，Player只监听事件渲染UI。这种**事件驱动+单向数据流**的设计让两个组件解耦得很好。
 
-![播放器控制区域：进度条、音量、播放/暂停、列表/歌词抽屉](/assets/images/posts/B站音乐播放器/player-controls.png)
+![播放器控制区域：进度条、音量、播放/暂停、列表/歌词抽屉](/assets/images/posts/B站音乐播放器/player-controls.webp)
 
 ---
 
@@ -159,7 +159,7 @@ Layer 2: B站官方 API（通过代理）
 
 一开始我尝试了直接导入B站收藏夹，但B站的API限制太多（需要Cookie、跨域、私有收藏夹不可访问），体验很糟糕
 
-![老版本的B站收藏夹导入方案：选择收藏夹类型后输入fid](/assets/images/posts/B站音乐播放器/old-collection-approach.png)
+![老版本的B站收藏夹导入方案：选择收藏夹类型后输入fid](/assets/images/posts/B站音乐播放器/old-collection-approach.webp)
 
 后来换了个思路 —— **让用户在博客里自己创建播放列表**，把想听的BV号归类管理：
 
@@ -195,9 +195,9 @@ Layer 2: B站官方 API（通过代理）
 
 每个`[+]`按钮会弹出播放列表选择框，点击后曲目会**追加到主播放队列的末尾**，而不是替换当前播放
 
-![已保存的视频收藏列表：每个视频旁有[+]添加到播放列表和删除按钮](/assets/images/posts/B站音乐播放器/saved-videos.png)
+![已保存的视频收藏列表：每个视频旁有[+]添加到播放列表和删除按钮](/assets/images/posts/B站音乐播放器/saved-videos.webp)
 
-![自建播放列表展开状态：显示曲目名称、BV号，右侧[+]和删除按钮](/assets/images/posts/B站音乐播放器/playlists.png)
+![自建播放列表展开状态：显示曲目名称、BV号，右侧[+]和删除按钮](/assets/images/posts/B站音乐播放器/playlists.webp)
 
 ### 多曲目队列
 
