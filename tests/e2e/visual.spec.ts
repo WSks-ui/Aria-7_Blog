@@ -5,11 +5,12 @@ const pages = [
   { name: "home", path: "/" },
   { name: "blog", path: "/blog/" },
   { name: "article", path: "/blog/welcome/" },
+  { name: "works", path: "/works/" },
   { name: "game", path: "/game/" },
 ];
 
 for (const entry of pages) {
-  test(`${entry.name} 首屏在目标视口无横向溢出`, async ({ page }, testInfo) => {
+  test(`${entry.name} 首屏在目标视口无横向溢出`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto(entry.path);
     if (entry.path === "/") await dismissSplash(page);
@@ -26,10 +27,8 @@ for (const entry of pages) {
     expect(layout.sideTools).toBe(1);
     expect(layout.navigation).toBe(1);
 
-    const screenshot = await page.screenshot({ animations: "disabled" });
-    await testInfo.attach(`${entry.name}-${testInfo.project.name}.png`, {
-      body: screenshot,
-      contentType: "image/png",
+    await expect(page).toHaveScreenshot(`${entry.name}.png`, {
+      animations: "disabled",
     });
   });
 }
