@@ -1,7 +1,4 @@
 ---
-import { Picture } from "astro:assets";
-import ariaAvatar from "../assets/images/aria-avatar.webp";
-
 const commands = ["pin -r blog", "open works", "cat aria.md", "play tiny-game"];
 ---
 
@@ -37,12 +34,17 @@ const commands = ["pin -r blog", "open works", "cat aria.md", "play tiny-game"];
           data-terminal-avatar
           aria-label="点击头像"
         >
-          <Picture
-            src={ariaAvatar}
+          <!--
+            头像是固定尺寸的互动控件，不能使用 Picture 的内层 picture 盒子承载。
+            Picture 会以自身固有宽度参与按钮网格布局，导致图片不能填满圆形按钮，
+            也会打断下面 img + span 的加载失败兜底选择器。这里保留公开静态资源，
+            使图片与后备文案始终处于同一网格层，恢复原有的完整头像渲染。
+          -->
+          <img
+            src="/images/aria-avatar.webp"
             alt="Aria-7 头像"
-            widths={[128, 256, 512]}
-            sizes="(max-width: 720px) 104px, 160px"
-            formats={["avif", "webp"]}
+            width="512"
+            height="512"
             loading="lazy"
             decoding="async"
           />
