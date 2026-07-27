@@ -50,9 +50,23 @@ export const initChessPlayroom = () => {
     bq: "♛",
     bk: "♚",
   };
+  const pieceNames = {
+    p: "兵",
+    n: "马",
+    b: "象",
+    r: "车",
+    q: "后",
+    k: "王",
+  };
+  const pieceColors = {
+    w: "白方",
+    b: "黑方",
+  };
   const captured = { w: [], b: [] };
 
   let selectedSquare = "";
+  // roving tabindex 始终保留一个入口，重绘棋盘后也不会让键盘焦点丢失。
+  let activeSquare = "e2";
   let legalTargets = [];
   let lastMove = null;
   let flipped = false;
@@ -88,6 +102,8 @@ export const initChessPlayroom = () => {
   };
 
   const getPieceAt = (square) => game.get(square);
+  const describePiece = (piece) => `${pieceColors[piece.color]}${pieceNames[piece.type]}`;
+  const describeSquare = (square) => `${square[0]} 线 ${square[1]} 格`;
   const describeTurn = () => (game.turn() === "w" ? "白方" : "黑方");
   const describeWinner = () => (game.turn() === "w" ? "黑方" : "白方");
   const getDifficulty = () => difficultyNodes.find((node) => node.checked)?.value || "soft";
@@ -208,6 +224,18 @@ export const initChessPlayroom = () => {
     const fallback = "暂无吃子";
     capturedWhiteNode.textContent = captured.w.length ? captured.w.map((piece) => pieceMarks[`b${piece}`]).join(" ") : fallback;
     capturedBlackNode.textContent = captured.b.length ? captured.b.map((piece) => pieceMarks[`w${piece}`]).join(" ") : fallback;
+    capturedWhiteNode.setAttribute(
+      "aria-label",
+      captured.w.length
+        ? `白方吃掉：${captured.w.map((piece) => `${pieceColors.b}${pieceNames[piece]}`).join("、")}`
+        : "白方暂未吃子",
+    );
+    capturedBlackNode.setAttribute(
+      "aria-label",
+      captured.b.length
+        ? `黑方吃掉：${captured.b.map((piece) => `${pieceColors.w}${pieceNames[piece]}`).join("、")}`
+        : "黑方暂未吃子",
+    );
   };
 
   const syncMoveLog = () => {
@@ -320,6 +348,7 @@ export const initChessPlayroom = () => {
     aiTurnToken += 1;
     startTimer();
     clearSelection();
+    activeSquare = "e2";
     syncCaptured();
     syncMoveLog();
     syncStatus();
@@ -328,6 +357,39 @@ export const initChessPlayroom = () => {
   };
 
   const getSquareNode = (square) => boardNode.querySelector(`[data-square="${square}"]`);
+
+  const ensureActiveSquare = () => {
+    const order = getSquareOrder();
+    if (!order.includes(activeSquare)) activeSquare = order.includes("e2") ? "e2" : order[0];
+  };
+
+  const focusActiveSquare = () => {
+    ensureActiveSquare();
+    boardNode.querySelectorAll("[data-square]").forEach((node) => {
+      node.tabIndex = node.dataset.square === activeSquare ? 0 : -1;
+    });
+    getSquareNode(activeSquare)?.focus({ preventScroll: true });
+  };
+
+  const getAdjacentSquare = (square, direction) => {
+    const order = getSquareOrder();
+    const currentIndex = order.indexOf(square);
+    if (currentIndex < 0) return activeSquare;
+
+    const row = Math.floor(currentIndex / 8);
+    const column = currentIndex % 8;
+    const offsets = {
+      ArrowUp: [-1, 0],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+      ArrowRight: [0, 1],
+    };
+    const [rowOffset, columnOffset] = offsets[direction] ?? [0, 0];
+    const nextRow = row + rowOffset;
+    const nextColumn = column + columnOffset;
+    if (nextRow < 0 || nextRow > 7 || nextColumn < 0 || nextColumn > 7) return square;
+    return order[nextRow * 8 + nextColumn];
+  };
 
   const createPieceFxClone = (pieceNode, squareNode, className) => {
     if (!pieceNode || !squareNode) return null;
@@ -403,35 +465,54 @@ export const initChessPlayroom = () => {
   const renderBoard = () => {
     const squares = getSquareOrder();
     const targetSet = new Set(legalTargets.map((move) => move.to));
+    ensureActiveSquare();
     boardNode.querySelectorAll("[data-aria-runtime-style]").forEach((node) => runtimeStyles.clear(node));
     boardNode.replaceChildren();
     boardNode.classList.toggle("is-flipped", flipped);
 
-    squares.forEach((square) => {
+    squares.forEach((square, index) => {
+      if (index % 8 === 0) {
+        const row = document.createElement("div");
+        row.className = "chess-board__row";
+        row.setAttribute("role", "row");
+        row.setAttribute("aria-rowindex", String(Math.floor(index / 8) + 1));
+        boardNode.append(row);
+      }
+
       const piece = getPieceAt(square);
-      const tile = document.createElement("button");
+      const tile = document.createElement("div");
       const fileIndex = files.indexOf(square[0]);
       const rankIndex = Number(square[1]);
       const isLight = (fileIndex + rankIndex) % 2 === 1;
       tile.className = `chess-square ${isLight ? "is-light" : "is-dark"}`;
-      tile.type = "button";
       tile.dataset.square = square;
       tile.setAttribute("role", "gridcell");
-      tile.setAttribute("aria-label", `${square}${piece ? ` ${piece.color === "w" ? "白" : "黑"}${piece.type}` : " 空格"}`);
+      tile.setAttribute("aria-colindex", String((index % 8) + 1));
+      tile.tabIndex = square === activeSquare ? 0 : -1;
 
       if (selectedSquare === square) tile.classList.add("is-selected");
       if (targetSet.has(square)) tile.classList.add(getPieceAt(square) ? "is-capture-target" : "is-move-target");
       if (lastMove && (lastMove.from === square || lastMove.to === square)) tile.classList.add("is-last-move");
       if (hiddenLandingSquare === square) tile.classList.add("is-landing-hidden");
+      tile.setAttribute("aria-selected", String(selectedSquare === square));
+
+      const squareState = [
+        describeSquare(square),
+        piece ? describePiece(piece) : "空格",
+        selectedSquare === square ? "已选中" : "",
+        targetSet.has(square) ? (getPieceAt(square) ? "可吃子" : "可落子") : "",
+      ].filter(Boolean);
+      tile.setAttribute("aria-label", squareState.join("，"));
 
       if (piece) {
         const mark = document.createElement("span");
         mark.className = `chess-piece chess-piece--${piece.color}`;
         mark.textContent = pieceMarks[`${piece.color}${piece.type}`];
+        mark.setAttribute("aria-hidden", "true");
         tile.append(mark);
       }
 
-      boardNode.append(tile);
+      boardNode.lastElementChild?.append(tile);
     });
   };
 
@@ -462,6 +543,7 @@ export const initChessPlayroom = () => {
     if (move.captured) captured[move.color].push(move.captured);
     lastMove = move;
     clearSelection();
+    activeSquare = move.to;
     hiddenLandingSquare = moveFx?.to || "";
     syncCaptured();
     syncMoveLog();
@@ -527,19 +609,21 @@ export const initChessPlayroom = () => {
       if (isDisposed || token !== aiTurnToken) return;
       try {
         const moves = game.moves({ verbose: true });
-        if (moves.length) applyMove(chooseAiMove(moves));
+        if (moves.length) {
+          const boardHadFocus = boardNode.contains(document.activeElement);
+          applyMove(chooseAiMove(moves));
+          if (boardHadFocus) focusActiveSquare();
+        }
       } finally {
         setAiThinking(false);
       }
     }, delay);
   };
 
-  boardNode.addEventListener("click", (event) => {
+  const activateSquare = (square) => {
     if (!hasStarted) return;
     if (aiThinking || game.isGameOver()) return;
-    const tile = event.target.closest("[data-square]");
-    if (!tile) return;
-    const square = tile.dataset.square;
+    activeSquare = square;
 
     if (!selectedSquare) {
       selectSquare(square);
@@ -560,6 +644,34 @@ export const initChessPlayroom = () => {
     }
 
     selectSquare(square);
+  };
+
+  boardNode.addEventListener("click", (event) => {
+    const tile = event.target.closest("[data-square]");
+    const square = tile?.dataset.square;
+    if (!square) return;
+    activateSquare(square);
+    focusActiveSquare();
+  });
+
+  // 棋盘使用 roving tabindex：Tab 只进入一个格子，方向键在可见的 8×8 布局中移动。
+  boardNode.addEventListener("keydown", (event) => {
+    const tile = event.target.closest("[data-square]");
+    const square = tile?.dataset.square;
+    if (!square) return;
+
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      activeSquare = getAdjacentSquare(square, event.key);
+      focusActiveSquare();
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      activateSquare(square);
+      focusActiveSquare();
+    }
   });
 
   startButton?.addEventListener("click", () => {
@@ -568,7 +680,7 @@ export const initChessPlayroom = () => {
     lockSetupControls();
     setDrawerPinned(false);
     resetGame();
-    boardNode.focus({ preventScroll: true });
+    focusActiveSquare();
   });
 
   drawerToggle?.addEventListener("click", () => {

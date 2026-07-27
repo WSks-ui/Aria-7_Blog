@@ -395,6 +395,11 @@
     0 24px 70px rgba(64, 76, 104, 0.18);
 }
 
+/* 保留 ARIA grid 的行层级，同时不改变原有 8×8 网格的视觉布局。 */
+.chess-board__row {
+  display: contents;
+}
+
 .chess-square {
   position: relative;
   display: grid;
@@ -428,7 +433,22 @@
 .chess-square:hover,
 .chess-square:focus-visible {
   filter: brightness(1.04) saturate(1.08);
+}
+
+.chess-square:focus-visible {
   outline: none;
+}
+
+/* 棋盘会裁切格子外部内容，因此使用内嵌双层焦点环，避免键盘焦点被隐藏。 */
+.chess-square:focus-visible::before {
+  position: absolute;
+  inset: 3px;
+  z-index: 5;
+  border: 3px solid #315a7d;
+  border-radius: 5px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92);
+  content: "";
+  pointer-events: none;
 }
 
 .chess-square.is-selected {

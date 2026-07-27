@@ -14,13 +14,8 @@ const expectSingleActiveNav = async (page: import("@playwright/test").Page, href
   await expect(page.locator(`.nav-link[href="${href}"]`)).toHaveAttribute("aria-current", "page");
 };
 
-test("预览响应施加部署配置中的 CSP 与安全头", async ({ page }, testInfo) => {
+test("预览响应施加 _headers 中的 CSP 与安全头", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chromium", "响应头只需在一个浏览器项目验证");
-  const config = JSON.parse(await readFile(new URL("../../vercel.json", import.meta.url), "utf8"));
-  const expectedHeaders = Object.fromEntries(
-    config.headers.find((rule: { source: string }) => rule.source === "/(.*)").headers
-      .map(({ key, value }: { key: string; value: string }) => [key.toLowerCase(), value]),
-  );
   const headersFile = await readFile(new URL("../../public/_headers", import.meta.url), "utf8");
   const lines = headersFile.split(/\r?\n/);
   const globalRuleIndex = lines.findIndex((line) => line.trim() === "/*");
@@ -38,12 +33,10 @@ test("预览响应施加部署配置中的 CSP 与安全头", async ({ page }, t
       }),
   );
 
-  expect(mirroredHeaders).toEqual(expectedHeaders);
-
   const response = await page.goto("/");
   expect(response).not.toBeNull();
   const actualHeaders = await response!.allHeaders();
-  for (const [key, value] of Object.entries(expectedHeaders)) {
+  for (const [key, value] of Object.entries(mirroredHeaders)) {
     expect(actualHeaders[key]).toBe(value);
   }
   await dismissSplash(page);

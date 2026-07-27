@@ -7,7 +7,7 @@ import "../styles/game.css";
 
 <BaseLayout title="Aria Chess" description="Aria-7th Lab 的国际象棋页面。" bodyClass="inner-page chess-page">
   <NavBar compact />
-  <main class="page-frame">
+  <main id="main-content" class="page-frame" tabindex="-1">
     <section class="chess-room" data-chess-room>
       <div class="chess-start" data-chess-start>
         <p class="eyebrow">aria@chess:~$ ready</p>
@@ -32,10 +32,22 @@ import "../styles/game.css";
           <strong data-chess-timer>00:00</strong>
         </aside>
         <div class="chess-board-shell">
+          <p id="aria-chess-keyboard-help" class="sr-only">
+            使用方向键在棋盘格之间移动，按 Enter 或空格键选择棋子或落子。
+          </p>
           <div class="chess-board__labels chess-board__labels--files" aria-hidden="true">
             <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span>
           </div>
-          <div class="chess-board" role="grid" aria-label="国际象棋棋盘" data-chess-board></div>
+          <div
+            class="chess-board"
+            role="grid"
+            tabindex="-1"
+            aria-label="国际象棋棋盘"
+            aria-describedby="aria-chess-keyboard-help"
+            aria-rowcount="8"
+            aria-colcount="8"
+            data-chess-board
+          ></div>
           <div class="chess-board__labels chess-board__labels--ranks" aria-hidden="true">
             <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
           </div>
@@ -67,7 +79,7 @@ import "../styles/game.css";
         <div class="chess-panel__drawer" id="aria-chess-drawer">
           <div class="chess-panel__card">
             <span class="chess-panel__kicker">棋局设置</span>
-            <strong data-chess-status>准备好开始国际象棋了吗？</strong>
+            <strong role="status" aria-live="polite" aria-atomic="true" data-chess-status>准备好开始国际象棋了吗？</strong>
             <p data-chess-tip>选择难度后，点击开始对局。</p>
           </div>
 

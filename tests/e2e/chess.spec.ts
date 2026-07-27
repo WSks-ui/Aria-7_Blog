@@ -60,3 +60,31 @@ test("切页返回后棋盘只挂载一次并可重新操作", async ({ page }) 
   await page.locator("[data-chess-start-button]").click();
   await expect(page.locator("[data-chess-room]")).toHaveClass(/is-game-started/);
 });
+
+test("棋盘以 roving tabindex 提供方向键与完整中文棋子读法", async ({ page }) => {
+  await page.goto("/game/");
+  await waitForInteractions(page);
+  await page.locator("[data-chess-ai]").uncheck({ force: true });
+  await page.locator("[data-chess-start-button]").click();
+
+  const board = page.locator("[data-chess-board]");
+  const rovingSquare = board.locator('[data-square][tabindex="0"]');
+  await expect(rovingSquare).toHaveCount(1);
+  await expect(rovingSquare).toHaveAttribute("data-square", "e2");
+  await expect(board.locator('[data-square="e2"]')).toHaveAttribute("aria-label", /白方兵/);
+  await expect(page.locator("[data-chess-status]")).toHaveAttribute("aria-live", "polite");
+
+  await rovingSquare.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(rovingSquare).toHaveAttribute("data-square", "e3");
+  await page.keyboard.press("ArrowDown");
+  await expect(rovingSquare).toHaveAttribute("data-square", "e2");
+
+  await page.keyboard.press("Enter");
+  await expect(board.locator('[data-square="e2"]')).toHaveClass(/is-selected/);
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("Space");
+  await expect(page.locator("[data-chess-log] .chess-move")).toHaveCount(1);
+  await expect(board.locator('[data-square][tabindex="0"]')).toHaveCount(1);
+  await expect(board.locator('[data-square="e3"]')).toHaveAttribute("aria-label", /白方兵/);
+});
