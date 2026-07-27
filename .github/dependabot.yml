@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      npm-safe-updates:
+        update-types:
+          - patch
+          - minor
+    ignore:
+      # TypeScript 主版本通常会连带影响 Astro 类型检查和内容 schema，
+      # 保持为人工评审的独立升级，避免自动 PR 混入其他依赖变更。
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major

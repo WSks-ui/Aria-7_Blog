@@ -18,3 +18,10 @@ Astro + native CSS/JavaScript static personal blog for Aria-7.
 - Native CSS and browser JavaScript
 - Lucide Astro icons
 
+## Maintenance
+
+- [架构说明](docs/architecture.md)
+- [内容发布](docs/content-publishing.md)
+- [Cloudflare Pages 部署](docs/cloudflare-pages.md)
+- [灾难恢复](docs/disaster-recovery.md)
+
