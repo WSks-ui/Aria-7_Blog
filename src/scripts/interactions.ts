@@ -1,25 +1,84 @@
 import { PageScope } from "./core/page-scope";
 import { createSafeStorage } from "./core/safe-storage";
 import { calculateReadingProgress } from "./core/reading-progress";
-import { readLimitedText, validateMetingPayload } from "./core/media-policy";
+import { readLimitedText } from "./core/media-policy";
 import { RuntimeStyles } from "./core/runtime-styles";
 import { buildCalendarModel, formatRelativeActivity, getRuntimeDays } from "./core/time";
+import { COMMAND_FALLBACK_ENTRIES, SITE_STARTED_AT } from "../site-config";
 
-const FALLBACK_COMMAND_ENTRIES = [
-  { id: "page:home", kind: "page", title: "Home", description: "返回 Aria-7th Lab 首页。", href: "/", group: "页面", keywords: ["home", "首页", "主页"] },
-  { id: "page:blog", kind: "page", title: "Blog", description: "浏览所有技术笔记和文章。", href: "/blog/", group: "页面", keywords: ["blog", "文章", "归档"] },
-  { id: "page:works", kind: "page", title: "Works", description: "查看项目和作品列表。", href: "/works/", group: "页面", keywords: ["works", "项目", "作品"] },
-  { id: "page:game", kind: "page", title: "Game", description: "打开 Aria Chess。", href: "/game/", group: "页面", keywords: ["game", "chess", "游戏"] },
-  { id: "page:me", kind: "page", title: "Me", description: "查看个人介绍。", href: "/me/", group: "页面", keywords: ["me", "about", "个人"] },
-];
-let commandIndexPromise = null;
+/**
+ * 旧页面的选择器由 Astro 模板与多种自定义元素共同组成。这里把未带泛型的选择器
+ * 收窄到可交互的 HTMLElement，避免每个 feature 在不改变运行时行为的前提下重复断言。
+ */
+declare global {
+  interface ParentNode {
+    querySelector(selectors: string): any;
+    querySelectorAll(selectors: string): NodeListOf<any>;
+  }
+}
 
-const fetchCommandIndex = (url) => {
+interface CommandEntry {
+  id: string;
+  kind: string;
+  title: string;
+  description: string;
+  href: string;
+  group: string;
+  keywords?: string[];
+  meta?: string;
+  external?: boolean;
+  updatedTime?: number;
+  searchTitle?: string;
+  searchText?: string;
+}
+
+type PageEventListener = (event: any) => void;
+
+interface SplashAuxiliaryState {
+  node: HTMLElement;
+  hadInert: boolean;
+  ariaHidden: string | null;
+}
+
+interface ArticleHeadingTarget {
+  link: HTMLAnchorElement;
+  item: HTMLElement | null;
+  heading: HTMLElement;
+}
+
+interface PhysicsTarget {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface PhysicsBody extends PhysicsTarget {
+  el: HTMLElement;
+  targetX: number;
+  targetY: number;
+  vx: number;
+  vy: number;
+  angle: number;
+  targetAngle: number;
+  angularVelocity: number;
+  mass: number;
+}
+
+const isCommandEntry = (entry: CommandEntry | undefined): entry is CommandEntry => Boolean(entry);
+
+const FALLBACK_COMMAND_ENTRIES: CommandEntry[] = COMMAND_FALLBACK_ENTRIES.map((entry) => ({
+  ...entry,
+  keywords: [...entry.keywords],
+}));
+let commandIndexPromise: Promise<CommandEntry[]> | null = null;
+
+const fetchCommandIndex = (url: string): Promise<CommandEntry[]> => {
   if (commandIndexPromise) return commandIndexPromise;
   commandIndexPromise = fetch(url, { credentials: "same-origin" })
     .then((response) => readLimitedText(response))
-    .then((text) => JSON.parse(text))
-    .then((payload) => Array.isArray(payload) ? payload : Promise.reject(new Error("检索索引格式无效")))
+    .then((text) => JSON.parse(text) as unknown)
+    .then((payload) => Array.isArray(payload) ? payload as CommandEntry[] : Promise.reject(new Error("检索索引格式无效")))
     .catch((error) => {
       commandIndexPromise = null;
       throw error;
@@ -27,7 +86,7 @@ const fetchCommandIndex = (url) => {
   return commandIndexPromise;
 };
 
-export const initInteractions = (providedScope) => {
+export const initInteractions = (providedScope?: PageScope): (() => void) | undefined => {
   if (document.body.dataset.ariaInteractionsReady === "true") return;
   window.__ariaInteractionsCleanup?.();
   document.body.dataset.ariaInteractionsReady = "true";
@@ -35,9 +94,19 @@ export const initInteractions = (providedScope) => {
   const scope = providedScope instanceof PageScope ? providedScope : new PageScope();
   const storage = createSafeStorage();
   const runtimeStyles = new RuntimeStyles();
-  const addPageCleanup = (cleanup) => scope.add(cleanup);
-  const onPage = (target, type, listener, options) => {
-    scope.on(target, type, listener, options);
+  const addPageCleanup = (cleanup: () => void) => scope.add(cleanup);
+  const onPage = (
+    target: EventTarget | null | undefined,
+    type: string,
+    listener: PageEventListener,
+    options?: boolean | AddEventListenerOptions,
+  ) => {
+    scope.on(
+      target,
+      type,
+      listener,
+      options === true ? { capture: true } : options === false ? {} : options,
+    );
   };
 
   const cleanup = () => scope.dispose();
@@ -77,19 +146,20 @@ export const initInteractions = (providedScope) => {
     const filterLabels = new Map([
       ["all", "全部"],
       ["post", "文章"],
+      ["category", "分类"],
       ["tag", "标签"],
       ["project", "项目"],
       ["page", "页面"],
     ]);
-    let entries = [];
+    let entries: CommandEntry[] = [];
     let indexLoaded = false;
-    let activeItems = [];
+    let activeItems: HTMLElement[] = [];
     let activeFilter = "all";
     let selectedIndex = 0;
-    let lastFocused = null;
+    let lastFocused: HTMLElement | null = null;
     let closeTimer = 0;
 
-    const normalizeEntries = (items) => items.map((entry) => ({
+    const normalizeEntries = (items: CommandEntry[]): CommandEntry[] => items.map((entry) => ({
         ...entry,
         searchTitle: entry.title.normalize("NFKC").toLocaleLowerCase("zh-CN"),
         searchText: [entry.title, entry.description, entry.group, entry.meta, ...(entry.keywords || [])]
@@ -114,10 +184,10 @@ export const initInteractions = (providedScope) => {
 
     if (shortcutNode && /Macintosh|iPhone|iPad/.test(navigator.userAgent)) shortcutNode.textContent = "⌘ K";
 
-    const normalizeQuery = (value) => value.normalize("NFKC").trim().toLocaleLowerCase("zh-CN");
+    const normalizeQuery = (value: string) => value.normalize("NFKC").trim().toLocaleLowerCase("zh-CN");
 
     // #、@、/ 分别是标签、项目、页面的快捷检索前缀；它只临时收窄结果，不覆盖用户点选的分类。
-    const parseQuery = (value) => {
+    const parseQuery = (value: string) => {
       const rawQuery = normalizeQuery(value);
       const prefixKind = rawQuery.startsWith("#")
         ? "tag"
@@ -135,26 +205,26 @@ export const initInteractions = (providedScope) => {
       };
     };
 
-    const readRecentIds = () => {
+    const readRecentIds = (): string[] => {
       try {
-        const parsed = storage.getJSON(recentStorageKey, []);
+        const parsed = storage.getJSON<string[]>(recentStorageKey, []);
         return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
       } catch {
         return [];
       }
     };
 
-    const saveRecentEntry = (entry) => {
+    const saveRecentEntry = (entry: CommandEntry | undefined) => {
       if (!entry) return;
       const ids = [entry.id, ...readRecentIds().filter((id) => id !== entry.id)].slice(0, 6);
       storage.setJSON(recentStorageKey, ids);
     };
 
-    const getEntryById = (id) => entries.find((entry) => entry.id === id);
+    const getEntryById = (id: string) => entries.find((entry) => entry.id === id);
 
-    const scoreToken = (entry, token) => {
-      const title = entry.searchTitle;
-      const text = entry.searchText;
+    const scoreToken = (entry: CommandEntry, token: string) => {
+      const title = entry.searchTitle ?? "";
+      const text = entry.searchText ?? "";
       const requiresExactToken = /\d/.test(token);
       let score = 0;
       let matched = false;
@@ -199,7 +269,7 @@ export const initInteractions = (providedScope) => {
       return matched ? score : 0;
     };
 
-    const scoreEntry = (entry, terms) => {
+    const scoreEntry = (entry: CommandEntry, terms: string[]) => {
       if (!terms.length) return 0;
       const termScores = terms.map((term) => scoreToken(entry, term));
       if (termScores.some((score) => score === 0)) return 0;
@@ -214,8 +284,8 @@ export const initInteractions = (providedScope) => {
       return score;
     };
 
-    const getFallbackEntries = (kind) => {
-      const recentEntries = readRecentIds().map(getEntryById).filter(Boolean);
+    const getFallbackEntries = (kind: string): CommandEntry[] => {
+      const recentEntries = readRecentIds().map(getEntryById).filter(isCommandEntry);
       const available = kind === "all" ? entries : entries.filter((entry) => entry.kind === kind);
       const visibleRecent = recentEntries.filter((entry) => available.includes(entry));
 
@@ -223,13 +293,13 @@ export const initInteractions = (providedScope) => {
       const recommended = kind === "all"
         ? [
             ...entries.filter((entry) => entry.kind === "post").slice(0, 4),
-            ...defaultIds.map(getEntryById).filter(Boolean),
+            ...defaultIds.map(getEntryById).filter(isCommandEntry),
           ]
         : available;
       return [...visibleRecent, ...recommended.filter((entry) => !visibleRecent.includes(entry))].slice(0, maxResults);
     };
 
-    const getMatches = ({ query, kind, terms }) => {
+    const getMatches = ({ query, kind, terms }: { query: string; kind: string; terms: string[] }): CommandEntry[] => {
       if (!query) return getFallbackEntries(kind);
 
       return entries
@@ -241,7 +311,7 @@ export const initInteractions = (providedScope) => {
         .map(({ entry }) => entry);
     };
 
-    const appendHighlightedText = (node, value, terms) => {
+    const appendHighlightedText = (node: any, value: string, terms: string[]) => {
       node.replaceChildren();
       if (!terms.length) {
         node.textContent = value;
@@ -270,7 +340,7 @@ export const initInteractions = (providedScope) => {
       });
     };
 
-    const setSelectedIndex = (nextIndex, shouldScroll = false) => {
+    const setSelectedIndex = (nextIndex: number, shouldScroll = false) => {
       if (!activeItems.length) {
         selectedIndex = 0;
         input?.removeAttribute("aria-activedescendant");
@@ -295,7 +365,7 @@ export const initInteractions = (providedScope) => {
       activeItems = [];
       selectedIndex = 0;
 
-      resultsRoot.querySelectorAll("[data-command-result]").forEach((node) => {
+      resultsRoot.querySelectorAll("[data-command-result]").forEach((node: HTMLElement) => {
         runtimeStyles.clear(node);
         node.remove();
       });
@@ -352,7 +422,7 @@ export const initInteractions = (providedScope) => {
       setSelectedIndex(0);
     };
 
-    const setActiveFilter = (kind) => {
+    const setActiveFilter = (kind: string) => {
       activeFilter = filterLabels.has(kind) ? kind : "all";
       filterButtons.forEach((button) => {
         const active = button.dataset.commandFilter === activeFilter;
@@ -401,7 +471,8 @@ export const initInteractions = (providedScope) => {
     const openSelected = () => {
       const item = activeItems[selectedIndex];
       if (!item) return;
-      const entry = getEntryById(item.dataset.commandId);
+      const commandId = item.dataset.commandId;
+      const entry = commandId ? getEntryById(commandId) : undefined;
       saveRecentEntry(entry);
       item.click();
       closeCommandPalette();
@@ -503,10 +574,57 @@ export const initInteractions = (providedScope) => {
     });
   }
 
+  let recoverHomeSplash = () => {};
+
   const initHomeSplash = () => {
     const routeSplash = document.getElementById("aria-welcome-splash");
+    const homeShell = document.querySelector(".home-shell");
+    const auxiliaryNodes = [
+      document.querySelector("[data-skip-link]"),
+      document.querySelector("[data-side-tools]"),
+      document.querySelector("[data-command-palette]"),
+    ].filter((node): node is HTMLElement => node instanceof HTMLElement);
+    let auxiliaryState: SplashAuxiliaryState[] = [];
+    let contentBlocked = false;
+
+    const blockHomeContent = () => {
+      if (contentBlocked) return;
+      contentBlocked = true;
+
+      homeShell?.setAttribute("inert", "");
+      homeShell?.setAttribute("aria-hidden", "true");
+      auxiliaryState = auxiliaryNodes.map((node) => ({
+        node,
+        hadInert: node.hasAttribute("inert"),
+        ariaHidden: node.getAttribute("aria-hidden"),
+      }));
+      auxiliaryNodes.forEach((node) => {
+        node.setAttribute("inert", "");
+        node.setAttribute("aria-hidden", "true");
+      });
+    };
+
+    const releaseHomeContent = () => {
+      // 首页主内容的 inert/aria-hidden 只服务于欢迎层，任何退出路径都必须清理。
+      homeShell?.removeAttribute("inert");
+      homeShell?.removeAttribute("aria-hidden");
+
+      if (!contentBlocked) return;
+      contentBlocked = false;
+      auxiliaryState.forEach(({ node, hadInert, ariaHidden }) => {
+        if (!node.isConnected) return;
+        if (!hadInert) node.removeAttribute("inert");
+        if (ariaHidden === null) node.removeAttribute("aria-hidden");
+        else node.setAttribute("aria-hidden", ariaHidden);
+      });
+      auxiliaryState = [];
+    };
+    // 初始化中出现同步异常时，外层仍可调用同一份恢复逻辑。
+    recoverHomeSplash = releaseHomeContent;
+
     if (!routeSplash) {
       window.__ariaSplashActive = false;
+      releaseHomeContent();
       return;
     }
 
@@ -514,42 +632,60 @@ export const initInteractions = (providedScope) => {
     // 已经看过欢迎层的同一标签页，必须直接移除新插入的 splash，避免覆盖主页。
     if (window.__ariaSplashSeen) {
       window.__ariaSplashActive = false;
+      releaseHomeContent();
       routeSplash.remove();
       return;
     }
 
+    blockHomeContent();
     window.__ariaSplashSeen = true;
     window.__ariaSplashActive = true;
 
     let done = false;
+    let dismissTimer = 0;
+    let minShowTimer = 0;
+    let maxTimer = 0;
     const startTime = Date.now();
     const minShowMs = 300;
     const maxShowMs = 2500;
     const progressBar = routeSplash.querySelector("[data-splash-progress-bar]");
     const commandText = routeSplash.querySelector("[data-splash-cmd]");
 
-    const setProgress = (loaded, total) => {
+    const setProgress = (loaded: number, total: number) => {
       if (!progressBar) return;
       const progress = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 100;
       runtimeStyles.set(progressBar, "width", `${progress}%`);
     };
 
-    const finish = () => {
+    const finish = ({ focusMain = false }: { focusMain?: boolean } = {}) => {
       if (done) return;
       done = true;
+      window.clearTimeout(minShowTimer);
+      window.clearTimeout(maxTimer);
       window.__ariaSplashActive = false;
+      routeSplash.setAttribute("aria-hidden", "true");
+      // 淡出动画尚未结束时也不能让键盘再次落到不可见的欢迎层。
+      routeSplash.setAttribute("inert", "");
+      routeSplash.setAttribute("tabindex", "-1");
       routeSplash.classList.add("is-dismissed");
-      window.setTimeout(() => routeSplash.remove(), reduceMotion ? 140 : 500);
+      releaseHomeContent();
+      if (focusMain && homeShell?.isConnected) {
+        // 仅用户主动通过键盘关闭时转移焦点；自动关闭不打断当前阅读位置。
+        homeShell.focus({ preventScroll: true });
+      }
+      dismissTimer = window.setTimeout(() => {
+        routeSplash.remove();
+      }, reduceMotion ? 140 : 500);
     };
 
-    const tryFinish = (ready) => {
+    const tryFinish = (ready: boolean) => {
       if (!ready || done) return;
       const elapsed = Date.now() - startTime;
       if (elapsed >= minShowMs) finish();
-      else window.setTimeout(finish, minShowMs - elapsed);
+      else minShowTimer = window.setTimeout(finish, minShowMs - elapsed);
     };
 
-    const waitForImageElement = (image) => new Promise((resolve) => {
+    const waitForImageElement = (image: HTMLImageElement): Promise<void> => new Promise((resolve) => {
       image.loading = "eager";
       if ("fetchPriority" in image) image.fetchPriority = "high";
 
@@ -572,11 +708,11 @@ export const initInteractions = (providedScope) => {
 
     const trackHomeResources = () => {
       const homeShell = document.querySelector(".home-shell");
-      const waits = [];
+      const waits: Promise<void>[] = [];
       let loaded = 0;
 
       if (homeShell) {
-        homeShell.querySelectorAll("[data-splash-critical]").forEach((image) => {
+        homeShell.querySelectorAll("[data-splash-critical]").forEach((image: HTMLImageElement) => {
           waits.push(waitForImageElement(image));
         });
 
@@ -605,24 +741,45 @@ export const initInteractions = (providedScope) => {
       Promise.allSettled(waits).then(() => tryFinish(true));
     };
 
-    const maxTimer = window.setTimeout(finish, maxShowMs);
+    const startResourceTracking = () => {
+      try {
+        trackHomeResources();
+      } catch {
+        // 资源探测异常不能让主内容永久停留在 inert 状态。
+        finish();
+      }
+    };
+
+    maxTimer = window.setTimeout(finish, maxShowMs);
     addPageCleanup(() => {
+      window.clearTimeout(dismissTimer);
+      window.clearTimeout(minShowTimer);
       window.clearTimeout(maxTimer);
       window.__ariaSplashActive = false;
+      releaseHomeContent();
     });
-    onPage(routeSplash, "click", finish, { once: true });
+    onPage(routeSplash, "click", () => finish(), { once: true });
     onPage(routeSplash, "keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") finish();
+      if (event.key !== "Enter" && event.key !== " " && event.key !== "Escape") return;
+      event.preventDefault();
+      finish({ focusMain: true });
     });
 
     if (document.readyState === "loading") {
-      onPage(document, "DOMContentLoaded", trackHomeResources, { once: true });
+      onPage(document, "DOMContentLoaded", startResourceTracking, { once: true });
     } else {
-      trackHomeResources();
+      startResourceTracking();
     }
   };
 
-  initHomeSplash();
+  try {
+    initHomeSplash();
+  } catch {
+    // 交互初始化异常不应留下 inert 主内容；首屏仍可作为普通静态页面使用。
+    window.__ariaSplashActive = false;
+    recoverHomeSplash();
+    document.getElementById("aria-welcome-splash")?.remove();
+  }
 
   const homeLayerStage = document.querySelector("[data-home-layer-stage]");
   const labFeed = document.querySelector("#lab-feed");
@@ -641,7 +798,7 @@ export const initInteractions = (providedScope) => {
       return Math.max(1, homeLayerStage.getBoundingClientRect().height || window.innerHeight);
     };
 
-    const setPastHeroState = (nextPastHero) => {
+    const setPastHeroState = (nextPastHero: boolean) => {
       if (nextPastHero === wasPastHero) return;
       wasPastHero = nextPastHero;
 
@@ -718,7 +875,7 @@ export const initInteractions = (providedScope) => {
       }, reduceMotion ? 0 : 420);
     };
 
-    const guardLayerEndScroll = (event) => {
+    const guardLayerEndScroll = (event: WheelEvent) => {
       if (event.defaultPrevented || event.deltaY <= 0) return;
       const range = getLayerScrollRange();
       const scrollY = window.scrollY;
@@ -736,7 +893,7 @@ export const initInteractions = (providedScope) => {
       }
     };
 
-    const scrollToLayerEnd = (event) => {
+    const scrollToLayerEnd = (event: Event) => {
       event.preventDefault();
       window.scrollTo({
         top: getLayerScrollRange(),
@@ -777,7 +934,7 @@ export const initInteractions = (providedScope) => {
 
   if (labFeed && !reduceMotion) {
     let feedPointerFrame = 0;
-    let feedPointerEvent = null;
+    let feedPointerEvent: PointerEvent | null = null;
 
     const resetFeedPointer = () => {
       feedPointerEvent = null;
@@ -824,7 +981,7 @@ export const initInteractions = (providedScope) => {
   if (navHeader && navHoverZone && navPill) {
     let navCloseTimer = 0;
     let navPointerFrame = 0;
-    let navPointerEvent = null;
+    let navPointerEvent: PointerEvent | null = null;
 
     const syncNavMetrics = () => {
       // 导航宽度会随字体和视口变化；从子项尺寸计算，避免收起态 scrollWidth 被压小。
@@ -855,7 +1012,7 @@ export const initInteractions = (providedScope) => {
       if (!navPointerEvent) return;
 
       const { clientX, clientY } = navPointerEvent;
-      const hit = (node) => {
+      const hit = (node: Element) => {
         const rect = node.getBoundingClientRect();
         return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
       };
@@ -864,7 +1021,7 @@ export const initInteractions = (providedScope) => {
       else closeNav();
     };
 
-    const requestNavPointerSync = (event) => {
+    const requestNavPointerSync = (event: PointerEvent) => {
       if (event.pointerType === "touch") return;
       navPointerEvent = event;
       if (!navPointerFrame) navPointerFrame = window.requestAnimationFrame(syncNavPointer);
@@ -920,7 +1077,7 @@ export const initInteractions = (providedScope) => {
     let terminalCloseTimer = 0;
     const terminalLineHoldDelay = 5000;
 
-    const showCursorToast = (message, x, y) => {
+    const showCursorToast = (message: string, x: number, y: number) => {
       window.dispatchEvent(
         new CustomEvent("aria:cursor-toast", {
           detail: { message, x, y },
@@ -1114,7 +1271,7 @@ export const initInteractions = (providedScope) => {
   const runtimeNode = document.querySelector("[data-site-runtime]");
   if (runtimeNode && !runtimeNode.dataset.ariaRuntimeReady) {
     runtimeNode.dataset.ariaRuntimeReady = "true";
-    const runtimeStart = new Date(runtimeNode.dataset.runtimeStart || "2026-05-21T00:00:00+08:00");
+    const runtimeStart = new Date(runtimeNode.dataset.runtimeStart || SITE_STARTED_AT);
 
     const syncRuntime = () => {
       const days = getRuntimeDays(runtimeStart);
@@ -1130,7 +1287,7 @@ export const initInteractions = (providedScope) => {
   }
 
   document.querySelectorAll("[data-runtime-days]").forEach((node) => {
-    const start = new Date(node.dataset.runtimeStart || "2026-05-21T00:00:00+08:00");
+    const start = new Date(node.dataset.runtimeStart || SITE_STARTED_AT);
     node.textContent = `${getRuntimeDays(start).toLocaleString("zh-CN")} 天`;
   });
   document.querySelectorAll("[data-latest-activity][data-activity-date]").forEach((node) => {
@@ -1148,7 +1305,7 @@ export const initInteractions = (providedScope) => {
   if (calendarRoot) {
     const title = calendarRoot.querySelector("[data-calendar-title]");
     const grid = calendarRoot.querySelector("[data-calendar-grid]");
-    let postDates = [];
+    let postDates: Date[] = [];
     try {
       const values = JSON.parse(calendarRoot.dataset.postDates || "[]");
       if (Array.isArray(values)) postDates = values.map((value) => new Date(value)).filter((date) => !Number.isNaN(date.valueOf()));
@@ -1183,7 +1340,7 @@ export const initInteractions = (providedScope) => {
       giscusRoot.dataset.giscusLoaded = "true";
 
       const script = document.createElement("script");
-      // 更换脚本来源时必须同步 vercel.json 与 public/_headers 的 CSP script-src 白名单。
+      // 更换脚本来源时必须同步 public/_headers 中 CSP script-src 白名单。
       script.src = "https://giscus.app/client.js";
       script.async = true;
       script.crossOrigin = "anonymous";
@@ -1220,6 +1377,13 @@ export const initInteractions = (providedScope) => {
     addPageCleanup(() => giscusObserver.disconnect());
   }
 
+  /*
+   * Dock 与音乐播放器已迁移到 features/dock-controller.ts 和
+   * features/music-controller.ts，并由 bootstrap 在应用生命周期内只初始化一次。
+   * 这段历史实现暂时保留在本次重构差异中，便于逐项比对选择器与交互契约；
+   * 页面级初始化不得再次注册它们，避免 ClientRouter 切页后重复绑定。
+   */
+  /*
   const sideTools = document.querySelector("[data-side-tools]");
   const consoleTrigger = document.querySelector("[data-console-trigger]");
   if (sideTools && consoleTrigger && !sideTools.dataset.ariaConsoleReady) {
@@ -1843,6 +2007,8 @@ export const initInteractions = (providedScope) => {
     syncPlayingState();
   }
 
+  */
+
   const scrollRail = document.querySelector("[data-scroll-rail]");
   if (scrollRail) {
     // 滚动提示条只暴露一个 CSS 变量，视觉如何表现交给样式层，避免 JS 直接操作布局细节。
@@ -1868,14 +2034,14 @@ export const initInteractions = (providedScope) => {
     const countNode = blogFilter.querySelector("[data-blog-filter-count]");
     const topicExpandStorageKey = "aria-blog-topics-expanded";
 
-    const setTopicsExpanded = (expanded) => {
+    const setTopicsExpanded = (expanded: boolean) => {
       blogFilter.classList.toggle("is-expanded", expanded);
       topicToggle?.setAttribute("aria-expanded", String(expanded));
       if (topicToggleLabel) topicToggleLabel.textContent = expanded ? "收起" : "展开全部";
       storage.set(topicExpandStorageKey, String(expanded));
     };
 
-    const syncTopicFilter = (topic, shouldUpdateUrl = true) => {
+    const syncTopicFilter = (topic: string, shouldUpdateUrl = true) => {
       const selectedTopic = filterButtons.some((button) => button.dataset.blogTopicFilter === topic) ? topic : "all";
       let visibleCount = 0;
 
@@ -1925,22 +2091,22 @@ export const initInteractions = (providedScope) => {
     const progress = articleFrame.querySelector("[data-article-progress]");
     const progressValue = articleFrame.querySelector("[data-article-progress-value]");
     const tocLinks = [...articleFrame.querySelectorAll(".article-toc-list a[href^='#']")];
-    const headingTargets = tocLinks
-      .map((link) => {
+    const headingTargets: ArticleHeadingTarget[] = tocLinks.flatMap((link) => {
         const href = link.getAttribute("href");
-        if (!href || href === "#") return null;
-        return {
+        if (!href || href === "#") return [];
+        const heading = document.getElementById(decodeURIComponent(href.slice(1)));
+        if (!heading) return [];
+        return [{
           link,
           item: link.closest("li"),
-          heading: document.getElementById(decodeURIComponent(href.slice(1))),
-        };
-      })
-      .filter((entry) => entry?.heading);
+          heading,
+        }];
+      });
     const modes = new Set(["acrylic", "glass"]);
     const storageKey = "aria-article-view-mode";
     const opacityStorageKey = "aria-article-acrylic-opacity";
 
-    const applyArticleOpacity = (value) => {
+    const applyArticleOpacity = (value: string | number) => {
       const opacity = Math.min(78, Math.max(30, Number(value) || 58));
       runtimeStyles.set(articleFrame, "--article-acrylic-opacity", (opacity / 100).toFixed(2));
       if (opacityInput instanceof HTMLInputElement) opacityInput.value = String(opacity);
@@ -1948,7 +2114,7 @@ export const initInteractions = (providedScope) => {
       storage.set(opacityStorageKey, String(opacity));
     };
 
-    const applyArticleMode = (mode) => {
+    const applyArticleMode = (mode: string) => {
       const nextMode = modes.has(mode) ? mode : "acrylic";
       articleFrame.classList.toggle("is-article-acrylic", nextMode === "acrylic");
       articleFrame.classList.toggle("is-article-glass", nextMode === "glass");
@@ -2002,7 +2168,7 @@ export const initInteractions = (providedScope) => {
         queueArticleProgress();
       };
 
-      const setActiveHeading = (activeIndex) => {
+      const setActiveHeading = (activeIndex: number) => {
         headingTargets.forEach((entry, index) => {
           entry.item?.classList.toggle("is-active", index === activeIndex);
         });
@@ -2052,7 +2218,7 @@ export const initInteractions = (providedScope) => {
   const physicsTags = document.querySelector("[data-physics-tags]");
   if (physicsTags && !reduceMotion && window.matchMedia("(min-width: 720px)").matches) {
     const tagItems = [...physicsTags.querySelectorAll(".personal-tag")];
-    let bodies = [];
+    let bodies: PhysicsBody[] = [];
     let animationId = 0;
     let lastTime = 0;
     let startedAt = 0;
@@ -2083,9 +2249,9 @@ export const initInteractions = (providedScope) => {
       const bounds = physicsTags.getBoundingClientRect();
       physicsTags.classList.add("is-physics");
       physicsTags.classList.remove("is-settled");
-      const placedTargets = [];
+      const placedTargets: PhysicsTarget[] = [];
 
-      const overlapsPlacedTarget = (candidate, padding = 12) =>
+      const overlapsPlacedTarget = (candidate: PhysicsTarget, padding = 12) =>
         placedTargets.some(
           (placed) =>
             Math.abs(candidate.x + candidate.width / 2 - (placed.x + placed.width / 2)) <
@@ -2162,7 +2328,7 @@ export const initInteractions = (providedScope) => {
       physicsTags.classList.add("is-settled");
     };
 
-    const step = (time) => {
+    const step = (time: number) => {
       const bounds = physicsTags.getBoundingClientRect();
       const dt = Math.min((time - lastTime) / 16.67 || 1, 2);
       lastTime = time;
