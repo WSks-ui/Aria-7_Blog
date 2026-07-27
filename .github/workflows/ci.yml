@@ -51,6 +51,15 @@ jobs:
       - name: 构建生产站点
         run: npm run build
 
+      - name: 检查内部链接与静态资源
+        run: npm run check:links
+
+      - name: 检查构建性能预算
+        run: npm run check:performance
+
+      - name: 运行 Lighthouse 移动端门禁
+        run: npm run test:lighthouse
+
       - name: 运行端到端测试
         run: npm run test:e2e:ci
 
@@ -62,5 +71,34 @@ jobs:
           path: |
             playwright-report
             test-results
+            .lighthouseci
           if-no-files-found: ignore
           retention-days: 7
+
+  production-probe:
+    name: 生产部署探针
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SITE_URL: https://aria7bl0g.pages.dev
+      EXPECTED_SHA: ${{ github.sha }}
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: 配置 Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 等待并验证 Cloudflare Pages 部署
+        run: npm run verify:production

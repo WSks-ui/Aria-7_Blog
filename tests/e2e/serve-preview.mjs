@@ -12,7 +12,31 @@ if (!existsSync(distRoot)) {
   process.exit(1);
 }
 
-const { headers: headerRules = [] } = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8"));
+const parseHeadersFile = (source) => {
+  const rules = [];
+  let currentRule;
+
+  for (const line of source.split(/\r?\n/)) {
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
+
+    if (!/^\s/.test(line) && line.trimStart().startsWith("/")) {
+      currentRule = { path: line.trim(), headers: [] };
+      rules.push(currentRule);
+      continue;
+    }
+
+    const separator = line.indexOf(":");
+    if (!currentRule || !/^\s/.test(line) || separator <= 0) continue;
+    currentRule.headers.push({
+      key: line.slice(0, separator).trim(),
+      value: line.slice(separator + 1).trim(),
+    });
+  }
+
+  return rules;
+};
+
+const headerRules = parseHeadersFile(readFileSync(join(root, "public", "_headers"), "utf8"));
 
 const contentTypes = new Map([
   [".avif", "image/avif"],
@@ -25,15 +49,20 @@ const contentTypes = new Map([
   [".json", "application/json; charset=utf-8"],
   [".lrc", "text/plain; charset=utf-8"],
   [".mp3", "audio/mpeg"],
+  [".mjs", "text/javascript; charset=utf-8"],
   [".png", "image/png"],
   [".svg", "image/svg+xml"],
   [".txt", "text/plain; charset=utf-8"],
   [".webp", "image/webp"],
+  [".xml", "application/xml; charset=utf-8"],
 ]);
+
+const globToRegExp = (pattern) =>
+  new RegExp(`^${pattern.split("*").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*")}$`);
 
 const applyConfiguredHeaders = (response, pathname) => {
   for (const rule of headerRules) {
-    const matcher = new RegExp(`^${rule.source}$`);
+    const matcher = globToRegExp(rule.path);
     if (!matcher.test(pathname)) continue;
     for (const header of rule.headers ?? []) response.setHeader(header.key, header.value);
   }
@@ -64,21 +93,25 @@ const findStaticFile = (pathname) => {
 const server = createServer((request, response) => {
   const url = new URL(request.url || "/", `http://${host}:${port}`);
   const file = findStaticFile(url.pathname);
+  const notFoundFile = join(distRoot, "404.html");
   applyConfiguredHeaders(response, url.pathname);
 
-  if (!file) {
+  if (!file && !existsSync(notFoundFile)) {
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     response.end("Not found");
     return;
   }
 
-  const size = statSync(file).size;
-  const type = contentTypes.get(extname(file).toLowerCase()) || "application/octet-stream";
+  // 缺失资源也渲染构建后的 404 页面，同时保持真实状态码，和 Cloudflare Pages 的行为一致。
+  const target = file ?? notFoundFile;
+  const isNotFound = !file;
+  const size = statSync(target).size;
+  const type = contentTypes.get(extname(target).toLowerCase()) || "application/octet-stream";
   const range = request.headers.range?.match(/^bytes=(\d*)-(\d*)$/);
   response.setHeader("Accept-Ranges", "bytes");
   response.setHeader("Content-Type", type);
 
-  if (range) {
+  if (range && !isNotFound) {
     const start = range[1] ? Number(range[1]) : 0;
     const end = range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
     if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || start > end || end >= size) {
@@ -91,13 +124,13 @@ const server = createServer((request, response) => {
       "Content-Range": `bytes ${start}-${end}/${size}`,
     });
     if (request.method === "HEAD") response.end();
-    else createReadStream(file, { start, end }).pipe(response);
+    else createReadStream(target, { start, end }).pipe(response);
     return;
   }
 
-  response.writeHead(200, { "Content-Length": size });
+  response.writeHead(isNotFound ? 404 : 200, { "Content-Length": size });
   if (request.method === "HEAD") response.end();
-  else createReadStream(file).pipe(response);
+  else createReadStream(target).pipe(response);
 });
 
 server.listen(port, host, () => {

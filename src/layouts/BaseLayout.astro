@@ -2,19 +2,23 @@
 import { ClientRouter } from "astro:transitions";
 import CommandPalette from "../components/CommandPalette.astro";
 import CustomCursor from "../components/CustomCursor.astro";
+import SeoHead from "../components/SeoHead.astro";
 import SideTools from "../components/SideTools.astro";
 import "../styles/global.css";
+import type { SeoData } from "../types/seo";
 
 interface Props {
   title?: string;
   description?: string;
   bodyClass?: string;
+  seo?: SeoData;
 }
 
 const {
   title = "Aria-7th Lab",
   description = "第七咏叹调实验室：Aria-7 的个人剪贴簿、动漫日记与技术笔记。",
   bodyClass = "",
+  seo,
 } = Astro.props;
 
 const pageTitle = title === "Aria-7th Lab" ? title : `${title} | Aria-7th Lab`;
@@ -24,15 +28,16 @@ const pageTitle = title === "Aria-7th Lab" ? title : `${title} | Aria-7th Lab`;
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
     <title>{pageTitle}</title>
+    <SeoHead title={pageTitle} description={description} seo={seo} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/runtime-styles.css" data-aria-runtime-styles />
     <ClientRouter />
   </head>
   <body class={bodyClass}>
+    <a class="skip-link" href="#main-content" data-skip-link>跳到主内容</a>
     <div transition:persist="aria-custom-cursor">
       <CustomCursor />
     </div>
@@ -43,16 +48,6 @@ const pageTitle = title === "Aria-7th Lab" ? title : `${title} | Aria-7th Lab`;
     <slot />
     <script>
       import { startBootstrap } from "../scripts/bootstrap";
-
-      declare global {
-        interface Window {
-          __ariaBootstrapReady?: boolean;
-          __ariaInteractionsCleanup?: () => void;
-          __ariaSplashSeen?: boolean;
-          __ariaSplashActive?: boolean;
-          __ariaCustomCursorReady?: boolean;
-        }
-      }
 
       startBootstrap();
     </script>

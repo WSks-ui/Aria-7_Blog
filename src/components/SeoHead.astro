@@ -1,0 +1,66 @@
+---
+import type { SeoData } from "../types/seo";
+
+interface Props {
+  title: string;
+  description: string;
+  seo?: SeoData;
+}
+
+const {
+  title,
+  description,
+  seo = {},
+} = Astro.props;
+
+const fallbackSite = new URL("https://aria7bl0g.pages.dev");
+const site = Astro.site ?? fallbackSite;
+const defaultImage = "/images/aria-social-card.webp";
+
+const createCanonicalUrl = (path: string) => {
+  const url = new URL(path, site);
+  url.search = "";
+  url.hash = "";
+
+  // 文章与栏目页统一使用尾斜杠，避免同一内容被搜索引擎视作两个地址。
+  if (!url.pathname.endsWith("/") && !url.pathname.includes(".")) {
+    url.pathname = `${url.pathname}/`;
+  }
+
+  return url;
+};
+
+const canonicalUrl = createCanonicalUrl(seo.canonicalPath ?? Astro.url.pathname);
+const imageUrl = new URL(seo.image ?? defaultImage, site).toString();
+const robots = seo.noindex ? "noindex, nofollow" : "index, follow";
+const isArticle = seo.type === "article";
+const jsonLd = seo.jsonLd
+  ? JSON.stringify(seo.jsonLd).replace(/</g, "\\u003c")
+  : undefined;
+---
+
+<link rel="canonical" href={canonicalUrl.toString()} />
+<meta name="robots" content={robots} />
+<meta property="og:type" content={isArticle ? "article" : "website"} />
+<meta property="og:locale" content="zh_CN" />
+<meta property="og:site_name" content="Aria-7th Lab" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonicalUrl.toString()} />
+<meta property="og:image" content={imageUrl} />
+<meta property="og:image:alt" content={seo.imageAlt ?? title} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imageUrl} />
+{
+  seo.article && (
+    <>
+      <meta property="article:published_time" content={seo.article.publishedTime} />
+      {seo.article.modifiedTime && <meta property="article:modified_time" content={seo.article.modifiedTime} />}
+      {seo.article.section && <meta property="article:section" content={seo.article.section} />}
+      {seo.article.tags?.map((tag) => <meta property="article:tag" content={tag} />)}
+    </>
+  )
+}
+{jsonLd && <script is:inline type="application/ld+json" set:html={jsonLd} />}

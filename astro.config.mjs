@@ -1,4 +1,5 @@
 ﻿import { unified } from "@astrojs/markdown-remark";
+import sitemap from "@astrojs/sitemap";
 import { defineConfig } from "astro/config";
 
 import rehypeImagePerformance from "./src/plugins/rehype-image-performance.mjs";
@@ -10,14 +11,17 @@ const normalizeSiteUrl = (value) => {
   return new URL(url).toString();
 };
 
-// 本地构建仍需要稳定的绝对地址；生产环境优先使用显式配置，其次读取 Vercel 自动注入的域名。
-const site =
-  normalizeSiteUrl(process.env.SITE_URL) ??
-  normalizeSiteUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL) ??
-  "http://localhost:4321";
+// 默认值始终是正式 Pages 域名，避免生产构建把 localhost 写入 canonical、RSS 或 sitemap。
+// 本地和预览环境若需不同域名，必须显式传入 SITE_URL。
+const site = normalizeSiteUrl(process.env.SITE_URL) ?? "https://aria7bl0g.pages.dev";
 
 export default defineConfig({
   site,
+  integrations: [
+    sitemap({
+      filter: (page) => !page.endsWith("/404.html"),
+    }),
+  ],
   devToolbar: {
     enabled: false,
   },

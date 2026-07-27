@@ -1,0 +1,24 @@
+---
+import NavBar from "../components/NavBar.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import "../styles/not-found.css";
+---
+
+<BaseLayout
+  title="页面未找到"
+  description="请求的页面不存在，或已经被移动。"
+  bodyClass="inner-page not-found-page"
+  seo={{ canonicalPath: "/404.html", noindex: true }}
+>
+  <NavBar compact />
+  <main id="main-content" class="page-frame not-found-frame" tabindex="-1">
+    <section class="not-found-card glass-panel" aria-labelledby="not-found-title">
+      <p class="not-found-card__code" aria-hidden="true">404 / PATH_NOT_FOUND</p>
+      <h1 id="not-found-title">这里还没有页面</h1>
+      <p>这个地址不存在，或者内容已经被移动。可以回到首页继续浏览 Aria-7th Lab。</p>
+      <a href="/">回到首页</a>
+    </section>
+    <SiteFooter />
+  </main>
+</BaseLayout>
