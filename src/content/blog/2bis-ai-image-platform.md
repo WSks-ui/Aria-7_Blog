@@ -4,13 +4,21 @@
 "pubDate": "2026-06-07"
 "updatedDate": "2026-06-29"
 "tags":
+  - "AI绘图"
+  - "全栈开发"
+  - "项目实战"
+"keywords":
   - "FastAPI"
   - "Vue3"
   - "Redis"
-  - "全栈"
-  - "AI绘图"
   - "SQLAlchemy"
-  - "项目实战"
+  - "文生图"
+  - "参考图"
+  - "图片编辑"
+  - "异步队列"
+  - "APIKey"
+  - "订阅额度"
+  - "积分系统"
 "category": "技术"
 "draft": false
 ---

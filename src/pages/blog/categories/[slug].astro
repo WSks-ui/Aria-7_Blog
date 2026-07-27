@@ -1,0 +1,16 @@
+---
+import ArchivePage from "../../../components/ArchivePage.astro";
+import { getSiteCatalog } from "../../../utils/siteCatalog";
+
+export async function getStaticPaths() {
+  const catalog = await getSiteCatalog();
+  return catalog.categories.map((term) => ({
+    params: { slug: term.slug },
+    props: { term, relatedTerms: catalog.tags },
+  }));
+}
+
+const { term, relatedTerms } = Astro.props;
+---
+
+<ArchivePage kind="category" term={term} relatedTerms={relatedTerms} />

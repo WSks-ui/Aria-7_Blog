@@ -4,10 +4,17 @@
 "pubDate": "2026-05-26"
 "tags":
   - "博客搭建"
+  - "建站记录"
+"keywords":
   - "Astro"
   - "Firefly"
   - "Vercel"
+  - "静态站点"
+  - "Giscus"
+  - "音乐播放器"
 "category": "杂谈"
+"series": "博客演进"
+"seriesOrder": 1
 "cover": "/assets/images/posts/博客搭建历程/vercel-deploy.webp"
 "draft": false
 ---
@@ -29,7 +36,7 @@
 - **改起来方便** —— 配置改改就行，不用动源码
 - **写文章舒服** —— Markdown 一把梭
 
-Firefly 是基于 Astro 做的博客主题，该有的功能基本都有：深色模式、评论、音乐播放器、标签分类什么的。对我来说够用了 (◍•ᴗ•◍)✧
+Firefly 是基于 Astro 做的博客主题，该有的功能基本都有：深色模式、评论、音乐播放器、标签分类什么的。它的原主题上游目前已经失效；这篇文章对应的历史实现和配置仍可在[旧版 aria7-blog 仓库](https://github.com/WSks-ui/aria7-blog)查看。对我来说当时已经够用了 (◍•ᴗ•◍)✧
 
 ## 搭建流程（简略版）
 

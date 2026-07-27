@@ -4,10 +4,17 @@
 "pubDate": "2026-05-27"
 "tags":
   - "AI"
+  - "本地推理"
+"keywords":
   - "大模型"
   - "MiniMind-O"
   - "全模态"
-  - "本地推理"
+  - "核显推理"
+  - "OCulink"
+  - "RTX5060"
+  - "AMD880M"
+  - "视频通话"
+  - "多模态"
 "category": "技术"
 "cover": "/assets/images/posts/MiniMind-O初体验/cover.webp"
 "draft": false

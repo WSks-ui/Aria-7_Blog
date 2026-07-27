@@ -22,7 +22,8 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 
 <BaseLayout title="Works" description="Aria-7th Lab 的 GitHub 项目展示。" bodyClass="inner-page">
   <NavBar compact />
-  <main class="page-frame works-frame">
+  <main id="main-content" class="page-frame works-frame" tabindex="-1">
+    <h1 class="sr-only">Aria-7th Lab 项目与作品</h1>
     <section class="work-grid work-grid--repos" aria-label="GitHub 项目列表">
       {
         repositories.map((repo, index) => (

@@ -1,0 +1,80 @@
+---
+import { ArrowLeft, ArrowRight, BookMarked, Link2 } from "@lucide/astro";
+import type { PublishedPost } from "../utils/siteCatalog";
+
+interface Props {
+  previousPost?: PublishedPost;
+  nextPost?: PublishedPost;
+  seriesPosts?: PublishedPost[];
+  relatedPosts?: PublishedPost[];
+}
+
+const {
+  previousPost,
+  nextPost,
+  seriesPosts = [],
+  relatedPosts = [],
+} = Astro.props;
+const hasRelations = previousPost || nextPost || seriesPosts.length > 0 || relatedPosts.length > 0;
+---
+
+{
+  hasRelations && (
+    <section class="article-relations" aria-label="继续阅读">
+      {
+        (previousPost || nextPost) && (
+          <nav class="article-relations__adjacent" aria-label="相邻文章">
+            {
+              previousPost ? (
+                <a href={`/blog/${previousPost.slug}/`} class="article-relation-link article-relation-link--previous">
+                  <ArrowLeft size={17} aria-hidden="true" />
+                  <span>
+                    <small>上一篇</small>
+                    <strong>{previousPost.title}</strong>
+                  </span>
+                </a>
+              ) : (
+                <span class="article-relation-link is-empty" aria-hidden="true"></span>
+              )
+            }
+            {
+              nextPost ? (
+                <a href={`/blog/${nextPost.slug}/`} class="article-relation-link article-relation-link--next">
+                  <span>
+                    <small>下一篇</small>
+                    <strong>{nextPost.title}</strong>
+                  </span>
+                  <ArrowRight size={17} aria-hidden="true" />
+                </a>
+              ) : (
+                <span class="article-relation-link is-empty" aria-hidden="true"></span>
+              )
+            }
+          </nav>
+        )
+      }
+
+      {
+        seriesPosts.length > 0 && (
+          <section class="article-relations__group" aria-labelledby="article-series-title">
+            <h2 id="article-series-title"><BookMarked size={18} aria-hidden="true" />同系列</h2>
+            <ul>
+              {seriesPosts.map((post) => <li><a href={`/blog/${post.slug}/`}>{post.title}</a></li>)}
+            </ul>
+          </section>
+        )
+      }
+
+      {
+        relatedPosts.length > 0 && (
+          <section class="article-relations__group" aria-labelledby="article-related-title">
+            <h2 id="article-related-title"><Link2 size={18} aria-hidden="true" />相关阅读</h2>
+            <ul>
+              {relatedPosts.map((post) => <li><a href={`/blog/${post.slug}/`}>{post.title}</a></li>)}
+            </ul>
+          </section>
+        )
+      }
+    </section>
+  )
+}

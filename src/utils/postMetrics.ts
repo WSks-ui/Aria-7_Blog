@@ -1,4 +1,4 @@
-interface PostMetrics {
+export interface PostMetrics {
   words: number;
   minutes: number;
 }

@@ -3,20 +3,29 @@
 "description": "记录将Bilibili音频源接入博客播放器，以及自建播放列表功能从构思到落地的完整过程"
 "pubDate": "2026-05-31"
 "tags":
-  - "Astro"
-  - "Firefly"
+  - "博客开发"
   - "音乐播放器"
   - "Bilibili"
+"keywords":
+  - "Astro"
+  - "Firefly"
   - "JavaScript"
-  - "博客"
+  - "MetingAPI"
+  - "网易云音乐"
+  - "B站音频"
+  - "播放列表"
+  - "Vercel"
+  - "Serverless"
 "category": "技术"
+"series": "博客演进"
+"seriesOrder": 2
 "cover": "/assets/images/posts/B站音乐播放器/cover.webp"
 "draft": false
 ---
 
 ## 说在前头
 
-我的博客用的是[Firefly](https://github.com/skylie/firefly)(astro)主题，自带一个挺好看的音乐播放器。默认支持两种模式：**Meting API在线音乐**和**本地音乐**。但一直有个遗憾 -- 播放器不支持Bilibili
+我的博客当时基于名为 Firefly 的 Astro 主题二次开发。原主题上游链接现已失效，相关历史实现与配置可以参考[旧版 aria7-blog 仓库](https://github.com/WSks-ui/aria7-blog)。它自带一个挺好看的音乐播放器，默认支持两种模式：**Meting API在线音乐**和**本地音乐**。但一直有个遗憾 -- 播放器不支持Bilibili
 
 作为一个重度B站用户，经常听到好听的BGM想收藏到博客里。如果能直接在博客的播放器里播B站视频的音频，那该多好
 

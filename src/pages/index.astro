@@ -1,11 +1,12 @@
 ﻿---
-import { getCollection } from "astro:content";
 import Announcement from "../components/Announcement.astro";
 import HeroTerminal from "../components/HeroTerminal.astro";
 import NavBar from "../components/NavBar.astro";
 import SakuraLayer from "../components/SakuraLayer.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { slugifyContent } from "../utils/contentSlug";
+import { getSiteCatalog } from "../utils/siteCatalog";
 import "../styles/home.css";
 
 const HOME_TAG_LIMIT = 10;
@@ -15,13 +16,8 @@ const stableTagScore = (value: string) => {
   for (const char of value) hash = Math.imul(hash ^ char.codePointAt(0)!, 16777619);
   return hash >>> 0;
 };
-const posts = (await getCollection("blog"))
-  .filter((post) => !post.data.draft)
-  .sort((a, b) => {
-    const dateA = a.data.updatedDate ?? a.data.pubDate;
-    const dateB = b.data.updatedDate ?? b.data.pubDate;
-    return dateB.valueOf() - dateA.valueOf();
-  });
+const catalog = await getSiteCatalog();
+const posts = catalog.posts;
 
 const tagIndex = new Map<
   string,
@@ -33,8 +29,8 @@ const tagIndex = new Map<
 >();
 
 posts.forEach((post) => {
-  const postTime = (post.data.updatedDate ?? post.data.pubDate).valueOf();
-  post.data.tags.forEach((rawTag) => {
+  const postTime = post.activityDate.valueOf();
+  post.tags.forEach((rawTag) => {
     const tag = rawTag.trim();
     if (!tag) return;
 
@@ -63,7 +59,7 @@ const homeTags = [...tagIndex.entries()]
   .slice(0, HOME_TAG_LIMIT)
   .map(([label, data], index) => ({
     label,
-    href: `/blog/${data.latestPostId}/`,
+    href: `/blog/tags/${slugifyContent(label)}/`,
     isLarge: index < 2 && data.count > 1,
     isWide: label.length >= 7,
   }));
@@ -79,7 +75,7 @@ const homeTags = [...tagIndex.entries()]
     <div class="aria-welcome-splash__glow" aria-hidden="true"></div>
     <div class="aria-welcome-splash__stage">
       <p class="aria-welcome-splash__subtitle">PERSONAL SCRAPBOOK / ANIME DIARY / DEV NOTES</p>
-      <h1 class="aria-welcome-splash__title">Aria-7th Lab</h1>
+      <p class="aria-welcome-splash__title">Aria-7th Lab</p>
       <div class="aria-welcome-splash__terminal glass-panel">
         <div class="aria-welcome-splash__dots" aria-hidden="true">
           <span></span><span></span><span></span>
@@ -349,7 +345,8 @@ const homeTags = [...tagIndex.entries()]
     }
   </style>
 
-  <main class="home-shell">
+  <!-- 欢迎层由客户端初始化后才会阻止主内容，避免脚本不可用时把首页永久锁住。 -->
+  <main id="main-content" class="home-shell" tabindex="-1">
     <NavBar showBrand={false} />
     <Announcement />
     <SakuraLayer />

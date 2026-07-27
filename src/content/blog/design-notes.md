@@ -2,7 +2,8 @@
 title: "视觉笔记：柔和但不牺牲可读性"
 description: "关于粉蓝薄荷色、漫画拼贴背景和正文阅读体验的一点取舍。"
 pubDate: 2026-06-29
-tags: ["UI", "CSS"]
+tags: ["设计笔记"]
+keywords: ["UI", "CSS", "可读性", "漫画拼贴", "减少动效"]
 draft: true
 ---
 

@@ -3,10 +3,17 @@
 "description": "基于 shiyin.cafe 实现了三层自定义鼠标效果：SVG 光标替换、延迟跟随灰圆、点击涟漪。本文拆解实现方案和关键细节"
 "pubDate": "2026-06-01"
 "tags":
+  - "前端交互"
+  - "视觉效果"
+"keywords":
   - "CSS"
   - "JavaScript"
-  - "鼠标效果"
-  - "前端教程"
+  - "SVG"
+  - "自定义光标"
+  - "鼠标跟随"
+  - "点击涟漪"
+  - "will-change"
+  - "transform"
 "category": "技术"
 "draft": false
 ---

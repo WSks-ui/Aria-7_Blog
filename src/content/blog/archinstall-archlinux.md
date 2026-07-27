@@ -3,8 +3,19 @@
 "description": "使用 archinstall 在 VMware 虚拟机中安装 ArchLinux 的完整记录，包含配置选项说明和四个常见坑的解决方法"
 "pubDate": "2026-06-03"
 "tags":
+  - "Linux"
+  - "系统安装"
+"keywords":
   - "ArchLinux"
   - "archinstall"
+  - "VMware"
+  - "Win11"
+  - "ISO"
+  - "iwctl"
+  - "Rufus"
+  - "Ventoy"
+  - "分区"
+  - "网络配置"
 "category": "技术"
 "draft": false
 ---

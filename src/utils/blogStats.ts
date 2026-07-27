@@ -1,8 +1,11 @@
 import { getPostMetrics } from "./postMetrics";
+import type { PostMetrics } from "./postMetrics";
 import { formatRelativeActivity, getRuntimeDays } from "../scripts/core/time";
+import { SITE_STARTED_AT } from "../site-config";
 
 interface BlogPostLike {
   body?: string;
+  metrics?: PostMetrics;
   data: {
     pubDate: Date;
     updatedDate?: Date;
@@ -21,7 +24,7 @@ export interface BlogStats {
   latestActivityText: string;
 }
 
-export const BLOG_START_DATE = new Date("2026-05-21T00:00:00+08:00");
+export const BLOG_START_DATE = new Date(SITE_STARTED_AT);
 
 export const getBlogStats = (
   posts: BlogPostLike[],
@@ -38,7 +41,7 @@ export const getBlogStats = (
   for (const post of posts) {
     categories.add(post.data.category ?? "杂谈");
     post.data.tags?.forEach((tag) => tags.add(tag));
-    words += getPostMetrics(post.body).words;
+    words += post.metrics?.words ?? getPostMetrics(post.body).words;
     const activityDate = post.data.updatedDate ?? post.data.pubDate;
     if (activityDate > latestActivityDate) latestActivityDate = activityDate;
   }

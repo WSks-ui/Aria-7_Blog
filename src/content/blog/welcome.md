@@ -3,8 +3,11 @@ title: "Aria-7th Lab 建站记录：从首页氛围到可长期使用的博客"
 description: "从 Astro 重搭骨架到一点点添上交互、音乐和国际象棋，这个站点是怎么长成现在这样的。"
 pubDate: 2026-07-04
 updatedDate: 2026-07-07
-tags: ["Astro", "建站"]
+tags: ["建站记录", "博客开发"]
+keywords: ["Astro", "原生JavaScript", "CSS", "音乐播放器", "Giscus", "国际象棋", "Meting", "静态站点"]
 category: "建站记录"
+series: "博客演进"
+seriesOrder: 3
 cover: "/images/hero-bg.webp"
 draft: false
 ---
