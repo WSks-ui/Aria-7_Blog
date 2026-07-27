@@ -1,5 +1,4 @@
 ---
-import { getCollection } from "astro:content";
 import {
   ArrowDown,
   ArrowUp,
@@ -9,6 +8,7 @@ import {
   CornerDownLeft,
   ExternalLink,
   FileText,
+  Folder,
   GitFork,
   Hash,
   Search,
@@ -17,11 +17,13 @@ import {
   X,
 } from "@lucide/astro";
 import { buildSearchIndex, STATIC_PAGE_ENTRIES } from "../utils/searchIndex";
+import { getSiteCatalog } from "../utils/siteCatalog";
 
-const commandIndex = buildSearchIndex(await getCollection("blog"));
+const commandIndex = buildSearchIndex(await getSiteCatalog());
 const filterItems = [
   { id: "all", label: "全部", count: commandIndex.length },
   { id: "post", label: "文章", count: commandIndex.filter((entry) => entry.kind === "post").length },
+  { id: "category", label: "分类", count: commandIndex.filter((entry) => entry.kind === "category").length },
   { id: "tag", label: "标签", count: commandIndex.filter((entry) => entry.kind === "tag").length },
   { id: "project", label: "项目", count: commandIndex.filter((entry) => entry.kind === "project").length },
   { id: "page", label: "页面", count: STATIC_PAGE_ENTRIES.length },
@@ -131,6 +133,7 @@ const filterItems = [
     <div class="command-palette__icons" hidden aria-hidden="true">
       <span data-command-icon="page"><Compass size={18} /></span>
       <span data-command-icon="post"><FileText size={18} /></span>
+      <span data-command-icon="category"><Folder size={18} /></span>
       <span data-command-icon="tag"><Hash size={18} /></span>
       <span data-command-icon="project"><GitFork size={18} /></span>
     </div>

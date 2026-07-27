@@ -1,4 +1,6 @@
 ﻿---
+import { SITE_REPOSITORY } from "../site-config";
+
 const year = new Intl.DateTimeFormat("en-US", {
   timeZone: "Asia/Shanghai",
   year: "numeric",
@@ -11,7 +13,7 @@ const year = new Intl.DateTimeFormat("en-US", {
   </p>
   <p class="site-footer__line">
     Powered by <a href="https://astro.build/" target="_blank" rel="noopener noreferrer">Astro</a>
-    &amp; <a href="https://github.com/WSks-ui/Aria-7_Blog" target="_blank" rel="noopener noreferrer">Aria7_Blog</a>
+    &amp; <a href={SITE_REPOSITORY.url} target="_blank" rel="noopener noreferrer">Aria7_Blog</a>
   </p>
 </footer>
 

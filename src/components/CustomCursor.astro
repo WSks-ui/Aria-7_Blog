@@ -9,7 +9,6 @@ import "../styles/custom-cursor.css";
 </div>
 
 <script>
-  // @ts-nocheck
   import { RuntimeStyles } from "../scripts/core/runtime-styles";
 
   (() => {
@@ -21,10 +20,10 @@ import "../styles/custom-cursor.css";
     const minWidth = 1024;
     const finePointer = window.matchMedia("(pointer: fine)");
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let layer = null;
-    let dot = null;
-    let orbit = null;
-    let toast = null;
+    let layer: HTMLElement | null = null;
+    let dot: HTMLElement | null = null;
+    let orbit: HTMLElement | null = null;
+    let toast: HTMLElement | null = null;
     let enabled = false;
     let pressing = false;
     let pointerX = 0;
@@ -53,7 +52,7 @@ import "../styles/custom-cursor.css";
       toast = document.querySelector("[data-custom-cursor-toast]");
     };
 
-    const setTransform = (element, x, y, size, extra = "") => {
+    const setTransform = (element: HTMLElement | null, x: number, y: number, size: number, extra = "") => {
       if (!element) return;
       runtimeStyles.set(
         element,
@@ -94,7 +93,7 @@ import "../styles/custom-cursor.css";
       frameId = 0;
     };
 
-    const createRipple = (x, y) => {
+    const createRipple = (x: number, y: number) => {
       if (!enabled || !layer) return;
       const ripple = document.createElement("span");
       ripple.className = "custom-cursor-ripple";
@@ -111,7 +110,7 @@ import "../styles/custom-cursor.css";
       root.classList.remove("custom-cursor-toast-visible");
     };
 
-    const showToast = (message, x = pointerX, y = pointerY) => {
+    const showToast = (message: string, x = pointerX, y = pointerY) => {
       if (!toast || !document.contains(toast)) syncElements();
       if (!toast) return;
       window.clearTimeout(toastTimer);
@@ -122,10 +121,10 @@ import "../styles/custom-cursor.css";
       toastTimer = window.setTimeout(hideToast, 1500);
     };
 
-    const copyTextByInput = (text) => {
+    const copyTextByInput = (text: string): boolean => {
       const input = document.createElement("textarea");
       const selection = window.getSelection();
-      const ranges = [];
+      const ranges: Range[] = [];
 
       if (selection) {
         for (let index = 0; index < selection.rangeCount; index += 1) {
@@ -140,8 +139,11 @@ import "../styles/custom-cursor.css";
       input.focus({ preventScroll: true });
       input.select();
 
-      const execCopy = document["exec" + "Command"];
-      const ok = typeof execCopy === "function" ? execCopy.call(document, "copy") : false;
+      // execCommand 已废弃但仍是受 CSP 约束时兼容旧浏览器的同步复制兜底；主路径优先 Clipboard API。
+      const legacyDocument = document as unknown as {
+        execCommand?: (command: string) => boolean;
+      };
+      const ok = legacyDocument.execCommand?.("copy") ?? false;
       input.remove();
 
       // 复制时会临时选中隐藏输入框，这里尽量恢复用户原本选中的文字。
@@ -153,7 +155,7 @@ import "../styles/custom-cursor.css";
       return ok;
     };
 
-    const copyText = async (text) => {
+    const copyText = async (text: string): Promise<boolean> => {
       if (!text) return false;
       if (copyTextByInput(text)) return true;
 
@@ -162,7 +164,7 @@ import "../styles/custom-cursor.css";
       try {
         return await Promise.race([
           navigator.clipboard.writeText(text).then(() => true),
-          new Promise((resolve) => window.setTimeout(() => resolve(false), clipboardTimeout)),
+          new Promise<boolean>((resolve) => window.setTimeout(() => resolve(false), clipboardTimeout)),
         ]);
       } catch {
         return false;
@@ -183,8 +185,7 @@ import "../styles/custom-cursor.css";
       showToast(ok ? (selectedText ? "已复制选中文本" : "已复制当前链接") : "复制失败，请手动复制");
     };
 
-    const onPointerMove = (event) => {
-      if (event.pointerType && event.pointerType !== "mouse") return;
+    const onPointerMove = (event: MouseEvent) => {
       pointerX = event.clientX;
       pointerY = event.clientY;
       if (longPressTimer) {
@@ -198,7 +199,7 @@ import "../styles/custom-cursor.css";
       }
     };
 
-    const onPointerDown = (event) => {
+    const onPointerDown = (event: MouseEvent) => {
       if (!enabled || event.button !== 0) return;
       pressing = true;
       pressStartX = event.clientX;
@@ -211,7 +212,7 @@ import "../styles/custom-cursor.css";
       }
     };
 
-    const onPointerUp = (event) => {
+    const onPointerUp = (event: MouseEvent) => {
       if (!enabled || event.button !== 0) return;
       pressing = false;
       clearLongPress();
@@ -230,7 +231,7 @@ import "../styles/custom-cursor.css";
       }
     };
 
-    const onClick = (event) => {
+    const onClick = (event: MouseEvent) => {
       if (!suppressNextClick) return;
       suppressNextClick = false;
       window.clearTimeout(suppressClickTimer);
@@ -238,7 +239,7 @@ import "../styles/custom-cursor.css";
       event.stopPropagation();
     };
 
-    const onContextMenu = (event) => {
+    const onContextMenu = (event: MouseEvent) => {
       // 窄屏、粗指针和减少动画模式会关闭自定义光标，此时必须完整恢复浏览器原生右键。
       if (!enabled) return;
       event.preventDefault();
@@ -246,8 +247,10 @@ import "../styles/custom-cursor.css";
       showToast("右键菜单已关闭", event.clientX, event.clientY);
     };
 
-    const onExternalToast = (event) => {
-      const detail = event.detail || {};
+    const onExternalToast = (event: Event) => {
+      const detail = event instanceof CustomEvent && typeof event.detail === "object" && event.detail !== null
+        ? event.detail as { message?: string; x?: number; y?: number }
+        : {};
       if (enabled) root.classList.add("custom-cursor-visible");
       showToast(detail.message || "收到啦", detail.x, detail.y);
     };

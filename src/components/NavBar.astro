@@ -1,6 +1,9 @@
 ---
 import { CodeXml, Gamepad2, House, NotebookText, Search, UserRound } from "@lucide/astro";
+import { Picture } from "astro:assets";
+import ariaAvatar from "../assets/images/aria-avatar.webp";
 import { isNavItemActive } from "../scripts/core/navigation";
+import { SITE_NAVIGATION } from "../site-config";
 
 interface Props {
   compact?: boolean;
@@ -9,13 +12,14 @@ interface Props {
 
 const { compact = false, showBrand = true } = Astro.props;
 
-const navItems = [
-  { href: "/", label: "HOME", sub: "front page", icon: House },
-  { href: "/blog", label: "BLOG", sub: "notes", icon: NotebookText },
-  { href: "/game", label: "GAME", sub: "playroom", icon: Gamepad2 },
-  { href: "/works", label: "WORKS", sub: "projects", icon: CodeXml },
-  { href: "/me", label: "ME", sub: "profile", icon: UserRound },
-];
+const navIcons = {
+  "/": House,
+  "/blog/": NotebookText,
+  "/game/": Gamepad2,
+  "/works/": CodeXml,
+  "/me/": UserRound,
+};
+const navItems = SITE_NAVIGATION.map((item) => ({ ...item, icon: navIcons[item.href] }));
 ---
 
 <header class:list={["site-header", { "site-header--compact": compact, "site-header--brandless": !showBrand }]}>
@@ -23,7 +27,15 @@ const navItems = [
     showBrand && (
       <a class="brand-pill" href="/" aria-label="Aria-7th Lab home" data-astro-prefetch="hover">
         <span class="brand-mascot" aria-hidden="true">
-          <img src="/images/aria-avatar.webp" alt="" width="512" height="512" loading="lazy" decoding="async" />
+          <Picture
+            src={ariaAvatar}
+            alt=""
+            widths={[64, 128, 256]}
+            sizes="32px"
+            formats={["avif", "webp"]}
+            loading="lazy"
+            decoding="async"
+          />
         </span>
         <strong>Aria-7th Lab</strong>
       </a>

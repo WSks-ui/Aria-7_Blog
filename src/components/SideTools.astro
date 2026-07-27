@@ -12,6 +12,7 @@ import {
   Sparkles,
   Volume2,
 } from "@lucide/astro";
+import { SITE_STARTED_AT } from "../site-config";
 ---
 
 <aside class="side-tools" aria-label="Aria Dock 页面控制台" data-side-tools data-music-root>
@@ -160,7 +161,7 @@ import {
 
     <div class="site-runtime" aria-label="博客运行时间">
       <span>运行时长</span>
-      <strong data-site-runtime data-runtime-start="2026-05-21T00:00:00+08:00">0 天</strong>
+      <strong data-site-runtime data-runtime-start={SITE_STARTED_AT}>0 天</strong>
     </div>
   </section>
 </aside>

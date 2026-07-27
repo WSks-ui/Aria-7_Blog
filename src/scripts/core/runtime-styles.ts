@@ -37,9 +37,43 @@ const removeRule = (entry: RuntimeStyleEntry) => {
 export class RuntimeStyles {
   readonly #entries = new Map<Element, RuntimeStyleEntry>();
   readonly #styleSheetProvider: StyleSheetProvider;
+  readonly #usesDefaultProvider: boolean;
+  #styleSheet: CSSStyleSheet | null = null;
+  #styleLink: HTMLLinkElement | null = null;
 
   constructor(styleSheetProvider: StyleSheetProvider = defaultStyleSheetProvider) {
     this.#styleSheetProvider = styleSheetProvider;
+    this.#usesDefaultProvider = styleSheetProvider === defaultStyleSheetProvider;
+  }
+
+  #getStyleSheet(): CSSStyleSheet | null {
+    if (!this.#usesDefaultProvider) {
+      // 测试与自定义注入的 provider 可以替换返回值，不能假设其引用永久不变。
+      try {
+        this.#styleSheet = this.#styleSheetProvider();
+      } catch {
+        this.#styleSheet = null;
+      }
+      return this.#styleSheet;
+    }
+
+    // 同一个 RuntimeStyles 实例通常服务于一页或一个持久组件。缓存 link.sheet 后，
+    // 动画帧内只需命中 CSSRule，不必反复 querySelector/CSSOM 查询；换页替换 link 时会自动失效。
+    if (this.#styleLink?.isConnected && this.#styleLink.sheet) {
+      const currentSheet = this.#styleLink.sheet;
+      if (this.#styleSheet === currentSheet) return currentSheet;
+      this.#styleSheet = currentSheet;
+      return currentSheet;
+    }
+
+    try {
+      this.#styleLink = document.querySelector<HTMLLinkElement>("link[data-aria-runtime-styles]");
+      this.#styleSheet = this.#styleLink?.sheet ?? null;
+    } catch {
+      this.#styleLink = null;
+      this.#styleSheet = null;
+    }
+    return this.#styleSheet;
   }
 
   #getEntry(target: Element): RuntimeStyleEntry {
@@ -59,12 +93,7 @@ export class RuntimeStyles {
   }
 
   #getRule(entry: RuntimeStyleEntry): CSSStyleRule | null {
-    let sheet: CSSStyleSheet | null;
-    try {
-      sheet = this.#styleSheetProvider();
-    } catch {
-      return null;
-    }
+    const sheet = this.#getStyleSheet();
     if (!sheet) return null;
     if (entry.sheet === sheet && entry.rule) return entry.rule;
 
@@ -121,5 +150,7 @@ export class RuntimeStyles {
 
   dispose(): void {
     [...this.#entries.keys()].forEach((target) => this.clear(target));
+    this.#styleSheet = null;
+    this.#styleLink = null;
   }
 }
