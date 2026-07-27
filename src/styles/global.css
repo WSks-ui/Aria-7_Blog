@@ -1395,6 +1395,8 @@ button {
 }
 
 .side-tools.is-pinned .side-console {
+  /* 展开面板需覆盖与书签的重叠边缘，避免标签漂浮在内容卡片上方。 */
+  z-index: 5;
   opacity: 1;
   pointer-events: auto;
   clip-path: inset(0 0 0 0 round 30px);
