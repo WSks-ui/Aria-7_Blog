@@ -1,8 +1,11 @@
 ﻿---
 import BaseLayout from "./BaseLayout.astro";
+import { Picture } from "astro:assets";
+import { getPostCoverAsset } from "../assets/post-covers";
 import SiteFooter from "../components/SiteFooter.astro";
 import NavBar from "../components/NavBar.astro";
 import GiscusComments from "../components/GiscusComments.astro";
+import ArticleRelations from "../components/ArticleRelations.astro";
 import {
   Activity,
   BookOpen,
@@ -14,6 +17,8 @@ import {
   Tags,
 } from "@lucide/astro";
 import { readSiteImageDimensions } from "../lib/images";
+import type { PublishedPost } from "../utils/siteCatalog";
+import { SITE_STARTED_AT } from "../site-config";
 import "../styles/article.css";
 
 interface TocItem {
@@ -39,6 +44,7 @@ interface Props {
   pubDate: Date;
   updatedDate?: Date;
   tags?: string[];
+  keywords?: string[];
   category?: string;
   cover?: string;
   comment?: boolean;
@@ -46,6 +52,10 @@ interface Props {
   minutes?: number;
   toc?: TocItem[];
   stats?: ArticleStats;
+  previousPost?: PublishedPost;
+  nextPost?: PublishedPost;
+  seriesPosts?: PublishedPost[];
+  relatedPosts?: PublishedPost[];
 }
 
 const {
@@ -54,6 +64,7 @@ const {
   pubDate,
   updatedDate,
   tags = [],
+  keywords = [],
   category,
   cover,
   comment = true,
@@ -61,6 +72,10 @@ const {
   minutes,
   toc = [],
   stats,
+  previousPost,
+  nextPost,
+  seriesPosts,
+  relatedPosts,
 } = Astro.props;
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   timeZone: "Asia/Shanghai",
@@ -71,11 +86,78 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 const displayTags = tags.slice(0, 10);
 const topToc = toc.filter((item) => item.depth <= 3).slice(0, 16);
 const coverDimensions = cover ? await readSiteImageDimensions(cover) : null;
+const coverAsset = getPostCoverAsset(cover);
+const site = Astro.site ?? new URL("https://aria7bl0g.pages.dev");
+const articleUrl = new URL(Astro.url.pathname, site).toString();
+const breadcrumbItems = [
+  {
+    "@type": "ListItem",
+    position: 1,
+    name: "首页",
+    item: new URL("/", site).toString(),
+  },
+  {
+    "@type": "ListItem",
+    position: 2,
+    name: "博客",
+    item: new URL("/blog/", site).toString(),
+  },
+  {
+    "@type": "ListItem",
+    position: 3,
+    name: title,
+    item: articleUrl,
+  },
+];
+const articleSeo = {
+  type: "article" as const,
+  canonicalPath: Astro.url.pathname,
+  image: cover,
+  imageAlt: `${title} 的文章封面`,
+  article: {
+    publishedTime: pubDate.toISOString(),
+    modifiedTime: (updatedDate ?? pubDate).toISOString(),
+    section: category,
+    tags,
+  },
+  jsonLd: [
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "@id": articleUrl,
+      headline: title,
+      description,
+      image: new URL(cover ?? "/images/aria-social-card.webp", site).toString(),
+      datePublished: pubDate.toISOString(),
+      dateModified: (updatedDate ?? pubDate).toISOString(),
+      mainEntityOfPage: {
+        "@type": "WebPage",
+        "@id": articleUrl,
+      },
+      author: {
+        "@type": "Person",
+        name: "Aria-7",
+      },
+      publisher: {
+        "@type": "Organization",
+        name: "Aria-7th Lab",
+        url: new URL("/", site).toString(),
+      },
+      ...(category ? { articleSection: category } : {}),
+      ...(tags.length + keywords.length > 0 ? { keywords: [...tags, ...keywords].join(", ") } : {}),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: breadcrumbItems,
+    },
+  ],
+};
 ---
 
-<BaseLayout title={title} description={description} bodyClass="inner-page article-page">
+<BaseLayout title={title} description={description} bodyClass="inner-page article-page" seo={articleSeo}>
   <NavBar compact />
-  <main class="page-frame article-frame" data-article-frame>
+  <main id="main-content" class="page-frame article-frame" tabindex="-1" data-article-frame>
     <div class="article-page-grid">
       <div class="article-main-column">
         <nav class="article-topic-bar glass-panel" aria-label="文章导航">
@@ -120,16 +202,31 @@ const coverDimensions = cover ? await readSiteImageDimensions(cover) : null;
             <p>{description}</p>
             {
               cover && (
-                <img
-                  class="article-cover"
-                  src={cover}
-                  alt=""
-                  width={coverDimensions?.width}
-                  height={coverDimensions?.height}
-                  loading="eager"
-                  decoding="async"
-                  fetchpriority="high"
-                />
+                coverAsset ? (
+                  <Picture
+                    src={coverAsset}
+                    alt=""
+                    widths={[480, 768, 1200]}
+                    sizes="(max-width: 900px) calc(100vw - 40px), min(760px, 60vw)"
+                    formats={["avif", "webp"]}
+                    fallbackFormat="webp"
+                    class="article-cover"
+                    loading="eager"
+                    decoding="async"
+                    fetchpriority="high"
+                  />
+                ) : (
+                  <img
+                    class="article-cover"
+                    src={cover}
+                    alt=""
+                    width={coverDimensions?.width}
+                    height={coverDimensions?.height}
+                    loading="eager"
+                    decoding="async"
+                    fetchpriority="high"
+                  />
+                )
               )
             }
           </header>
@@ -137,6 +234,12 @@ const coverDimensions = cover ? await readSiteImageDimensions(cover) : null;
             <slot />
           </div>
         </article>
+        <ArticleRelations
+          previousPost={previousPost}
+          nextPost={nextPost}
+          seriesPosts={seriesPosts}
+          relatedPosts={relatedPosts}
+        />
         {comment && <GiscusComments />}
       </div>
 
@@ -164,7 +267,7 @@ const coverDimensions = cover ? await readSiteImageDimensions(cover) : null;
                 </div>
                 <div>
                   <dt><Clock3 size={18} aria-hidden="true" />运行时长</dt>
-                  <dd data-runtime-days data-runtime-start="2026-05-21T00:00:00+08:00">{stats.runtimeDays.toLocaleString("zh-CN")} 天</dd>
+                  <dd data-runtime-days data-runtime-start={SITE_STARTED_AT}>{stats.runtimeDays.toLocaleString("zh-CN")} 天</dd>
                 </div>
                 <div>
                   <dt><Activity size={18} aria-hidden="true" />最后活动</dt>

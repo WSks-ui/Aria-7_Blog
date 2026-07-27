@@ -1,0 +1,4 @@
+Contact: https://github.com/WSks-ui/Aria-7_Blog/security/advisories/new
+Canonical: https://aria7bl0g.pages.dev/.well-known/security.txt
+Preferred-Languages: zh, en
+Expires: 2027-07-22T00:00:00.000Z

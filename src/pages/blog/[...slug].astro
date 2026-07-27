@@ -1,13 +1,17 @@
 ---
-import { getCollection, render } from "astro:content";
+import { render } from "astro:content";
 import PostLayout from "../../layouts/PostLayout.astro";
-import { getPostMetrics } from "../../utils/postMetrics";
-import { getBlogStats } from "../../utils/blogStats";
+import {
+  getAdjacentPosts,
+  getRelatedPosts,
+  getSeriesPosts,
+  getSiteCatalog,
+} from "../../utils/siteCatalog";
 
 export async function getStaticPaths() {
-  const posts = await getCollection("blog", ({ data }) => !data.draft);
+  const catalog = await getSiteCatalog();
 
-  return posts.map((post) => ({
+  return catalog.posts.map(({ post }) => ({
     params: { slug: post.id },
     props: { post },
   }));
@@ -15,16 +19,29 @@ export async function getStaticPaths() {
 
 const { post } = Astro.props;
 const { Content, headings } = await render(post);
-const metrics = getPostMetrics(post.body);
-const allPosts = await getCollection("blog", ({ data }) => !data.draft);
-const currentDate = new Date();
-const stats = getBlogStats(allPosts, { now: currentDate });
+const catalog = await getSiteCatalog();
+const current = catalog.posts.find((entry) => entry.id === post.id);
+if (!current) throw new Error(`公开文章“${post.id}”未出现在 SiteCatalog 中`);
+
 const articleStats = {
-  ...stats,
-  latestActivityDate: stats.latestActivityDate.toISOString(),
+  ...catalog.stats,
+  latestActivityDate: catalog.stats.latestActivityDate.toISOString(),
 };
+const adjacentPosts = getAdjacentPosts(catalog, current);
+const seriesPosts = getSeriesPosts(catalog, current);
+const relatedPosts = getRelatedPosts(catalog, current);
 ---
 
-<PostLayout {...post.data} words={metrics.words} minutes={metrics.minutes} toc={headings} stats={articleStats}>
+<PostLayout
+  {...post.data}
+  words={current.metrics.words}
+  minutes={current.metrics.minutes}
+  toc={headings}
+  stats={articleStats}
+  previousPost={adjacentPosts.previous}
+  nextPost={adjacentPosts.next}
+  seriesPosts={seriesPosts}
+  relatedPosts={relatedPosts}
+>
   <Content />
 </PostLayout>
