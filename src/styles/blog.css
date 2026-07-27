@@ -334,6 +334,52 @@
   gap: 10px;
 }
 
+.blog-archive-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(73, 100, 127, 0.15);
+}
+
+.blog-archive-links a,
+.archive-header__links a {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(79, 111, 137, 0.15);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.32);
+  color: #506176;
+  padding: 0 11px;
+  font-size: 0.82rem;
+  font-weight: 850;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.blog-archive-links a:hover,
+.blog-archive-links a:focus-visible,
+.archive-header__links a:hover,
+.archive-header__links a:focus-visible {
+  border-color: rgba(49, 167, 120, 0.32);
+  outline: 0;
+  background: rgba(223, 249, 236, 0.72);
+  color: #277b5d;
+  transform: translateY(-1px);
+}
+
+.blog-archive-links small,
+.archive-header__links small {
+  color: inherit;
+  font-size: 0.72rem;
+  opacity: 0.72;
+}
+
 .blog-list-page .blog-tag-filter {
   min-height: 42px;
   gap: 9px;
@@ -669,6 +715,58 @@
   background: rgba(225, 250, 237, 0.52);
   color: #286e58;
   font-weight: 900;
+}
+
+.archive-page .blog-frame {
+  display: grid;
+  gap: 18px;
+}
+
+.archive-header {
+  display: grid;
+  gap: 13px;
+  border-radius: 18px;
+  border-color: rgba(255, 255, 255, 0.64);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(226, 246, 237, 0.34)),
+    rgba(255, 255, 255, 0.38);
+  padding: clamp(24px, 4vw, 38px);
+}
+
+.archive-header__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #318765;
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.archive-header h1 {
+  margin: 0;
+  color: #202838;
+  font-size: clamp(1.72rem, 3vw, 2.46rem);
+  line-height: 1.2;
+}
+
+.archive-header > p {
+  max-width: 760px;
+  margin: 0;
+  color: #536075;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.archive-header__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.archive-post-grid {
+  margin-top: 0;
 }
 
 @media (max-width: 1180px) and (min-width: 901px) {

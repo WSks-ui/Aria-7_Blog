@@ -1,4 +1,6 @@
 ﻿---
+import { Picture } from "astro:assets";
+import ariaAvatar from "../assets/images/aria-avatar.webp";
 import SiteFooter from "../components/SiteFooter.astro";
 import NavBar from "../components/NavBar.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
@@ -6,10 +8,18 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 <BaseLayout title="Me" description="Aria-7th Lab 的个人介绍。" bodyClass="inner-page">
   <NavBar compact />
-  <main class="page-frame">
+  <main id="main-content" class="page-frame" tabindex="-1">
     <section class="profile-panel profile-panel--simple glass-panel">
       <div class="profile-avatar" aria-hidden="true">
-        <img src="/images/aria-avatar.webp" alt="" width="512" height="512" loading="lazy" decoding="async" />
+        <Picture
+          src={ariaAvatar}
+          alt=""
+          widths={[160, 256, 512]}
+          sizes="(max-width: 720px) 128px, 224px"
+          formats={["avif", "webp"]}
+          loading="lazy"
+          decoding="async"
+        />
       </div>
       <div>
         <p class="eyebrow">ME / PROFILE</p>

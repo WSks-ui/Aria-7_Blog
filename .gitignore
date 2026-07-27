@@ -3,6 +3,7 @@ dist/
 .astro/
 .codex-screens/
 coverage/
+.lighthouseci/
 playwright-report/
 test-results/
 .env
