@@ -13,6 +13,9 @@ module.exports = {
       ],
       numberOfRuns: 3,
       settings: {
+        // GitHub Actions 的 Ubuntu 24.04 Runner 禁用了 Chromium 依赖的用户命名空间。
+        // 仅在 CI 中关闭浏览器沙箱，避免 Lighthouse 在启动阶段直接退出；本地仍保留默认沙箱。
+        ...(process.env.CI ? { chromeFlags: "--no-sandbox --disable-setuid-sandbox" } : {}),
         formFactor: "mobile",
         throttlingMethod: "simulate",
         screenEmulation: {
