@@ -29,6 +29,8 @@ for (const entry of pages) {
 
     await expect(page).toHaveScreenshot(`${entry.name}.png`, {
       animations: "disabled",
+      // 热力图数据每日由 Actions 刷新，格子变化是数据更新而非布局回归，遮蔽避免基线误报。
+      mask: entry.name === "blog" ? [page.locator("[data-heatmap]")] : [],
     });
   });
 }

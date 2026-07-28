@@ -13,6 +13,7 @@ import {
 } from "@lucide/astro";
 import { Picture } from "astro:assets";
 import { getPostCoverAsset } from "../../assets/post-covers";
+import ContributionsHeatmap from "../../components/ContributionsHeatmap.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import NavBar from "../../components/NavBar.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
@@ -95,6 +96,8 @@ const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"];
             ))}
           </nav>
         </section>
+
+        <ContributionsHeatmap postDates={posts.map((post) => post.data.pubDate)} buildTime={currentDate} />
 
         <section class="post-grid" aria-label="文章列表" data-post-grid>
           {

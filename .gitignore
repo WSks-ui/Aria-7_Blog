@@ -2,6 +2,7 @@ node_modules/
 dist/
 .astro/
 .codex-screens/
+.workbuddy/
 coverage/
 .lighthouseci/
 playwright-report/

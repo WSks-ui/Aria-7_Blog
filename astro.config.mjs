@@ -35,6 +35,12 @@ export default defineConfig({
     prefetchAll: true,
     defaultStrategy: "hover",
   },
+  build: {
+    // 生产 CSP 为 style-src 'self' + style-src-attr 'none'：Astro 默认会把
+    // 小体积样式（如 not-found.css）内联进 HTML，在 404 页上触发 CSP 违规。
+    // 强制全部外置为 /_astro/* 样式表（该目录本身即 immutable 缓存域）。
+    inlineStylesheets: "never",
+  },
   markdown: {
     syntaxHighlight: "prism",
     processor: unified({

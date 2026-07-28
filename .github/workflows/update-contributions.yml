@@ -1,0 +1,57 @@
+name: 更新贡献快照
+
+# 每日刷新 src/data/github-contributions.json 并回写仓库。
+# 刷新发生在 GitHub 托管运行器（境外网络，无需代理），构建机与本地开发完全解耦。
+
+on:
+  schedule:
+    - cron: "17 0 * * *" # UTC 每日 00:17（北京 08:17）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: contributions-snapshot
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: 抓取并提交贡献快照
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: Asia/Shanghai
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: 配置 Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      # 自动注入的 GITHUB_TOKEN 可读公开贡献；若线上数值明显偏少（私有贡献缺失），
+      # 改用 read:user 权限的 PAT 配置为 secret CONTRIBUTIONS_PAT。
+      - name: 抓取贡献数据
+        run: npm run fetch:contributions
+        env:
+          GITHUB_TOKEN: ${{ secrets.CONTRIBUTIONS_PAT || secrets.GITHUB_TOKEN }}
+
+      # 仅当快照有变化才提交，避免空提交触发 CI 循环。
+      - name: 提交快照变更
+        run: |
+          if git diff --quiet -- src/data/github-contributions.json; then
+            echo "快照无变化，跳过提交"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/github-contributions.json
+          git commit -m "chore: update contributions snapshot"
+          git push

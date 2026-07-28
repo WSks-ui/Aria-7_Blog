@@ -4,14 +4,15 @@ import {
   dismissSplash,
   dispatchContextMenu,
   navigateWithClientRouter,
+  navLinkSelector,
   waitForInteractions,
 } from "./helpers";
 
 const expectSingleActiveNav = async (page: import("@playwright/test").Page, href: string) => {
   await expect(page.locator(".nav-link.active")).toHaveCount(1);
   await expect(page.locator('.nav-link[aria-current="page"]')).toHaveCount(1);
-  await expect(page.locator(`.nav-link[href="${href}"]`)).toHaveClass(/\bactive\b/);
-  await expect(page.locator(`.nav-link[href="${href}"]`)).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(navLinkSelector(href))).toHaveClass(/\bactive\b/);
+  await expect(page.locator(navLinkSelector(href))).toHaveAttribute("aria-current", "page");
 };
 
 test("预览响应施加 _headers 中的 CSP 与安全头", async ({ page }, testInfo) => {

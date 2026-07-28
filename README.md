@@ -24,4 +24,6 @@ Astro + native CSS/JavaScript static personal blog for Aria-7.
 - [内容发布](docs/content-publishing.md)
 - [Cloudflare Pages 部署](docs/cloudflare-pages.md)
 - [灾难恢复](docs/disaster-recovery.md)
+- [分阶段实施清单](docs/implementation-roadmap.md)
+- [归档热力图实施清单](docs/contributions-heatmap-plan.md)
 

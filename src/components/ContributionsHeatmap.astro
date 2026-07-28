@@ -1,0 +1,154 @@
+---
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { Code2, PenLine } from "@lucide/astro";
+import {
+  aggregateDates,
+  buildHeatmapModel,
+  isSnapshotStale,
+  parseSnapshot,
+  snapshotToCounts,
+  type HeatmapModel,
+} from "../utils/contributionHeatmap";
+import { toDateKey } from "../scripts/core/time";
+
+interface Props {
+  postDates: Date[];
+  buildTime: Date;
+}
+
+const { postDates, buildTime } = Astro.props;
+const endDate = toDateKey(buildTime);
+
+// 快照缺失 = 代码模式整体隐藏（未运行过抓取脚本）；
+// 快照损坏 = 构建期直接报错——两者必须分开，坏数据不该静默上线。
+// 注意不能用 import.meta.url 定位：构建期组件会被编译到临时目录，路径失真。
+let codeModel: HeatmapModel | null = null;
+let snapshotGeneratedAt = "";
+let snapshotStale = false;
+const rawSnapshot = await readFile(
+  resolve(process.cwd(), "src/data/github-contributions.json"),
+  "utf8",
+).catch(() => null);
+if (rawSnapshot) {
+  const snapshot = parseSnapshot(JSON.parse(rawSnapshot));
+  if (!snapshot) {
+    throw new Error(
+      "[heatmap] src/data/github-contributions.json 未通过校验，请运行 npm run fetch:contributions 重新生成",
+    );
+  }
+  codeModel = buildHeatmapModel(snapshotToCounts(snapshot), endDate);
+  snapshotGeneratedAt = snapshot.generatedAt;
+  snapshotStale = isSnapshotStale(snapshot.generatedAt, buildTime);
+}
+
+const writingModel = buildHeatmapModel(aggregateDates(postDates), endDate);
+const defaultMode = codeModel ? "code" : "writing";
+
+const weekdayRows = ["日", "一", "", "三", "", "五", ""];
+
+const panelCopy = (model: HeatmapModel, unit: string) =>
+  `过去一年共 ${model.total} ${unit} · 活跃 ${model.activeDays} 天`;
+
+const cellTitle = (date: string, count: number, unit: string) => {
+  const [, month, day] = date.split("-");
+  return `${Number(month)}月${Number(day)}日 · ${count} ${unit}`;
+};
+---
+
+<section
+  class="contribution-heatmap glass-panel"
+  aria-label="更新热力图"
+  data-heatmap
+  data-heatmap-default={defaultMode}
+>
+  <header class="contribution-heatmap__header">
+    <h2>更新热力</h2>
+    {
+      codeModel && (
+        <div class="contribution-heatmap__toggle" role="group" aria-label="热力图数据源切换">
+          <button type="button" data-heatmap-mode="code" aria-pressed={defaultMode === "code"}>
+            <Code2 size={15} aria-hidden="true" />
+            代码
+          </button>
+          <button type="button" data-heatmap-mode="writing" aria-pressed={defaultMode === "writing"}>
+            <PenLine size={15} aria-hidden="true" />
+            写作
+          </button>
+        </div>
+      )
+    }
+  </header>
+
+  {
+    ([
+      ["writing", writingModel, "篇文章", false],
+      ["code", codeModel, "次贡献", true],
+    ] as const).map(([mode, model, unit, isExternal]) =>
+      model ? (
+        <div
+          class="contribution-heatmap__panel"
+          data-heatmap-panel={mode}
+          hidden={mode !== defaultMode}
+        >
+          <div
+            class="contribution-heatmap__scroll"
+            tabindex="0"
+            role="region"
+            aria-label={`${mode === "code" ? "代码贡献" : "写作"}热力图，可横向滚动`}
+          >
+            <div class="heatmap__months" aria-hidden="true">
+              {model.weeks.map((_, weekIndex) => {
+                const label = model.monthLabels.find((entry) => entry.weekIndex === weekIndex);
+                return <span>{label ? label.text : ""}</span>;
+              })}
+            </div>
+            <div class="heatmap__body">
+              <div class="heatmap__weekdays" aria-hidden="true">
+                {weekdayRows.map((label) => (
+                  <span>{label}</span>
+                ))}
+              </div>
+              <div
+                class="heatmap__grid"
+                role="img"
+                aria-label={panelCopy(model, unit)}
+              >
+                {model.weeks.map((week) =>
+                  week.map((cell) =>
+                    cell.inRange ? (
+                      <span
+                        class="heatmap__cell"
+                        data-level={cell.level}
+                        title={cellTitle(cell.date, cell.count, unit)}
+                      />
+                    ) : (
+                      <span class="heatmap__cell heatmap__cell--future" aria-hidden="true" />
+                    ),
+                  ),
+                )}
+              </div>
+            </div>
+          </div>
+          <footer class="contribution-heatmap__footer">
+            <p>
+              {panelCopy(model, unit)}
+              {isExternal && snapshotStale && (
+                <span class="contribution-heatmap__stale">
+                  数据截至 {snapshotGeneratedAt.slice(0, 10)}
+                </span>
+              )}
+            </p>
+            <span class="contribution-heatmap__legend" aria-hidden="true">
+              少
+              {[0, 1, 2, 3, 4].map((level) => (
+                <i class="heatmap__cell" data-level={level} />
+              ))}
+              多
+            </span>
+          </footer>
+        </div>
+      ) : null,
+    )
+  }
+</section>

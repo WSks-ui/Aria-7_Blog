@@ -14,8 +14,10 @@ export default defineConfig({
         "src/scripts/core/**/*.ts",
         "src/utils/blogStats.ts",
         "src/utils/postMetrics.ts",
+        "src/utils/contributionHeatmap.ts",
         "src/lib/images.ts",
         "src/plugins/rehype-image-performance.mjs",
+        "scripts/lib/github-contributions.mjs",
       ],
       thresholds: {
         branches: 75,

@@ -33,6 +33,16 @@ export const dismissSplash = async (page: Page, method: "click" | "enter" = "cli
   await expect(splash).toHaveCount(0, { timeout: 3_000 });
 };
 
+/**
+ * 站点链接统一以尾斜杠渲染（/blog/），用例则以无斜杠路径（/blog）表达路由。
+ * 选择器同时容忍两种形态，避免约定差异导致的确定性超时。
+ */
+export const navLinkSelector = (href: string) => {
+  if (href === "/") return '.nav-link[href="/"]';
+  const normalized = href.replace(/\/$/, "");
+  return `.nav-link[href="${normalized}"], .nav-link[href="${normalized}/"]`;
+};
+
 export const navigateWithClientRouter = async (page: Page, href: string) => {
   const palette = page.locator("[data-command-palette]");
   if (await palette.count()) await expect(palette).toBeHidden();
@@ -42,7 +52,7 @@ export const navigateWithClientRouter = async (page: Page, href: string) => {
   }, bodyMarker);
 
   const navigation = page.locator('nav[aria-label="主导航"]');
-  const target = page.locator(`.nav-link[href="${href}"]`).first();
+  const target = page.locator(navLinkSelector(href)).first();
   const navOpacity = await navigation.evaluate((node) => Number.parseFloat(getComputedStyle(node).opacity));
   if (navOpacity < 0.9) {
     const box = await navigation.boundingBox();
@@ -59,7 +69,7 @@ export const navigateWithClientRouter = async (page: Page, href: string) => {
     return pathname === "/" ? "/" : pathname.replace(/\/$/, "");
   }).toBe(href);
   await expect(page.locator(`body[data-test-route-origin="${bodyMarker}"]`)).toHaveCount(0);
-  await expect(page.locator(`.nav-link[href="${href}"]`)).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(navLinkSelector(href))).toHaveAttribute("aria-current", "page");
   await waitForInteractions(page);
   // 根 View Transition 固定为 170ms；留出有界余量，避免下一次点击落在动画锁期间。
   await page.waitForTimeout(250);

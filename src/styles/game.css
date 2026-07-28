@@ -86,9 +86,7 @@
   max-width: 760px;
   margin: 0;
   color: #fff6fb;
-  font-family:
-    "Comic Sans MS", "Segoe Print", "Marker Felt", "Microsoft YaHei", "PingFang SC",
-    system-ui, sans-serif;
+  font-family: var(--cute-font);
   font-size: clamp(4.6rem, 8.2vw, 7.9rem);
   font-weight: 900;
   line-height: 0.86;

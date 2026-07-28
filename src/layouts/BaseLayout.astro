@@ -33,6 +33,12 @@ const pageTitle = title === "Aria-7th Lab" ? title : `${title} | Aria-7th Lab`;
     <title>{pageTitle}</title>
     <SeoHead title={pageTitle} description={description} seo={seo} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {
+      /* 展示字体仅首屏大标题使用且体积 ~5KB，只在首页预加载，其余页面靠 swap 自然加载。 */
+      bodyClass.includes("home-page") && (
+        <link rel="preload" href="/fonts/zcool-kuaile-latin-400.woff2" as="font" type="font/woff2" crossorigin />
+      )
+    }
     <link rel="stylesheet" href="/runtime-styles.css" data-aria-runtime-styles />
     <ClientRouter />
   </head>
