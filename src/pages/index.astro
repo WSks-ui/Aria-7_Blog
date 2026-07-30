@@ -1,69 +1,32 @@
 ﻿---
 import Announcement from "../components/Announcement.astro";
 import HeroTerminal from "../components/HeroTerminal.astro";
+import HomeDataLayer from "../components/HomeDataLayer.astro";
 import NavBar from "../components/NavBar.astro";
 import SakuraLayer from "../components/SakuraLayer.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { slugifyContent } from "../utils/contentSlug";
+import { repositories } from "../data/repositories";
+import { loadContributionSnapshotState } from "../utils/contributionSnapshot";
 import { getSiteCatalog } from "../utils/siteCatalog";
+import type { HomeDataSummary } from "../types/home";
 import "../styles/home.css";
 
-const HOME_TAG_LIMIT = 6;
-const HOME_TAG_POOL_LIMIT = 18;
-const stableTagScore = (value: string) => {
-  let hash = 2166136261;
-  for (const char of value) hash = Math.imul(hash ^ char.codePointAt(0)!, 16777619);
-  return hash >>> 0;
-};
 const catalog = await getSiteCatalog();
-const posts = catalog.posts;
-
-const tagIndex = new Map<
-  string,
-  {
-    count: number;
-    latestPostId: string;
-    latestTime: number;
-  }
->();
-
-posts.forEach((post) => {
-  const postTime = post.activityDate.valueOf();
-  post.tags.forEach((rawTag) => {
-    const tag = rawTag.trim();
-    if (!tag) return;
-
-    const current = tagIndex.get(tag);
-    if (!current) {
-      tagIndex.set(tag, {
-        count: 1,
-        latestPostId: post.id,
-        latestTime: postTime,
-      });
-      return;
-    }
-
-    current.count += 1;
-    if (postTime > current.latestTime) {
-      current.latestPostId = post.id;
-      current.latestTime = postTime;
-    }
-  });
-});
-
-// 首页标签 dock 只展示少量高频标签，其余折入「+N」指向博客筛选页；
-// 收束数量是刻意的：标签不再是视觉主体，立绘和内容带才是。
-const homeTags = [...tagIndex.entries()]
-  .sort((a, b) => b[1].count - a[1].count || b[1].latestTime - a[1].latestTime || a[0].localeCompare(b[0], "zh-CN"))
-  .slice(0, HOME_TAG_POOL_LIMIT)
-  .sort((a, b) => stableTagScore(a[0]) - stableTagScore(b[0]))
-  .slice(0, HOME_TAG_LIMIT)
-  .map(([label]) => ({
-    label,
-    href: `/blog/tags/${slugifyContent(label)}/`,
-  }));
-const hiddenTagCount = Math.max(0, tagIndex.size - homeTags.length);
+const contributionState = await loadContributionSnapshotState(catalog.buildTime);
+const primaryLanguages = new Set(repositories.map((repository) => repository.language.trim()).filter(Boolean));
+const homeDataSummary: HomeDataSummary = {
+  posts: catalog.stats.posts,
+  words: catalog.stats.words,
+  categories: catalog.stats.categories,
+  tags: catalog.stats.tags,
+  contributions: contributionState?.model.total ?? null,
+  activeDays: contributionState?.model.activeDays ?? null,
+  contributionGeneratedAt: contributionState?.generatedAt ?? null,
+  contributionStale: contributionState?.stale ?? false,
+  projects: repositories.length,
+  languages: primaryLanguages.size,
+};
 ---
 
 <BaseLayout title="Aria-7th Lab" bodyClass="home-page">
@@ -381,7 +344,7 @@ const hiddenTagCount = Math.max(0, tagIndex.size - homeTags.length);
         <a class="scroll-hint" href="#lab-feed">scroll@home:~$ &gt;&gt;</a>
       </section>
 
-      <section class="home-next home-layer home-layer--feed" id="lab-feed" aria-labelledby="lab-feed-title">
+      <section class="home-next home-layer home-layer--feed" aria-hidden="true" data-home-feed-visual>
         <div class="home-next__inner">
           <picture class="home-next__media" aria-hidden="true">
             <source media="(max-width: 900px)" srcset="/images/home-bg-mobile.webp" type="image/webp" />
@@ -401,39 +364,10 @@ const hiddenTagCount = Math.max(0, tagIndex.size - homeTags.length);
 
           <div class="home-next__spot" aria-hidden="true" data-feed-spot></div>
 
-          <!--
-            左侧内容带 + 右侧立绘安全区：UI 不进入右侧约 40%，
-            让立绘人物成为视线落点；标签收束为底部单排 dock。
-          -->
-          <div class="feed-content">
-            <p class="feed-content__eyebrow">PERSONAL SCRAPBOOK / ANIME DIARY / DEV NOTES</p>
-            <h2 id="lab-feed-title" class="feed-content__title">Aria-7th Lab</h2>
-            <p class="feed-content__tagline">
-              全栈开发者 Aria-7 的技术笔记与实验场——AI 绘图、本地推理，以及一切亲手做的小玩具。
-            </p>
-            <div class="feed-content__cta">
-              <a class="feed-cta feed-cta--primary" href="/blog/">阅读博客</a>
-              <a class="feed-cta feed-cta--secondary" href="/works/">看看作品</a>
-            </div>
-            <nav class="feed-tags" aria-label="热门标签">
-              {
-                homeTags.map((tag) => (
-                  <a class="feed-tags__tag" href={tag.href} aria-label={`阅读 ${tag.label} 相关最新文章`}>
-                    {tag.label}
-                  </a>
-                ))
-              }
-              {
-                hiddenTagCount > 0 && (
-                  <a class="feed-tags__tag feed-tags__tag--more" href="/blog/" aria-label={`查看全部 ${tagIndex.size} 个标签`}>
-                    +{hiddenTagCount}
-                  </a>
-                )
-              }
-            </nav>
-          </div>
         </div>
       </section>
+
+      <HomeDataLayer summary={homeDataSummary} />
 
       <div class="page-divider" aria-hidden="true" data-layer-divider>
         <span></span>

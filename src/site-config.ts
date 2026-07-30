@@ -12,6 +12,57 @@ export const SITE_REPOSITORY = {
   legacyUrl: "https://github.com/WSks-ui/aria7-blog",
 } as const;
 
+export interface HomeConnectItem {
+  id: "github" | "email" | "rss" | "bilibili";
+  label: string;
+  detail: string;
+  href?: string;
+  external?: boolean;
+  disabled?: boolean;
+}
+
+export interface HomeSkillItem {
+  id: "astro" | "typescript" | "css" | "playwright" | "vitest";
+  label: string;
+  detail: string;
+}
+
+export const HOME_CONNECT_LINKS: readonly HomeConnectItem[] = [
+  {
+    id: "github",
+    label: "GitHub",
+    detail: "WSks-ui",
+    href: "https://github.com/WSks-ui",
+    external: true,
+  },
+  {
+    id: "email",
+    label: "Email",
+    detail: "aria_7@yeah.net",
+    href: "mailto:aria_7@yeah.net",
+  },
+  {
+    id: "rss",
+    label: "RSS",
+    detail: "订阅更新",
+    href: "/rss.xml",
+  },
+  {
+    id: "bilibili",
+    label: "Bilibili",
+    detail: "COMING SOON",
+    disabled: true,
+  },
+] as const;
+
+export const HOME_SKILLS: readonly HomeSkillItem[] = [
+  { id: "astro", label: "Astro", detail: "内容驱动的静态站点" },
+  { id: "typescript", label: "TypeScript", detail: "可靠的交互类型边界" },
+  { id: "css", label: "CSS", detail: "响应式视觉与动效" },
+  { id: "playwright", label: "Playwright", detail: "端到端浏览器回归" },
+  { id: "vitest", label: "Vitest", detail: "快速单元与契约测试" },
+] as const;
+
 export const SITE_NAVIGATION = [
   {
     href: "/",

@@ -1,0 +1,265 @@
+---
+import {
+  Blocks,
+  Braces,
+  GitFork,
+  Mail,
+  MonitorPlay,
+  Palette,
+  Rss,
+  TestTubeDiagonal,
+} from "@lucide/astro";
+import { Picture } from "astro:assets";
+import automatedTestingImage from "../assets/home-data/automated-testing.png";
+import codeTerminalImage from "../assets/home-data/code-terminal.png";
+import taxonomyIndexImage from "../assets/home-data/taxonomy-index.png";
+import writingArchiveImage from "../assets/home-data/writing-archive.png";
+import {
+  HOME_CONNECT_LINKS,
+  HOME_SKILLS,
+  type HomeConnectItem,
+  type HomeSkillItem,
+} from "../site-config";
+import type { HomeDataSummary } from "../types/home";
+import "../styles/home-data-layer.css";
+
+interface Props {
+  summary: HomeDataSummary;
+}
+
+const { summary } = Astro.props;
+const integer = new Intl.NumberFormat("zh-CN");
+const compact = new Intl.NumberFormat("zh-CN", { notation: "compact", maximumFractionDigits: 1 });
+const formatValue = (value: number | null, mode: "integer" | "compact" = "integer") =>
+  value === null ? "--" : (mode === "compact" ? compact : integer).format(value);
+
+const cards = [
+  {
+    id: "writing",
+    eyebrow: "WRITING",
+    title: "写作档案",
+    image: writingArchiveImage,
+    values: [
+      { value: formatValue(summary.posts), label: "公开文章" },
+      { value: formatValue(summary.words, "compact"), label: "累计字数" },
+    ],
+    detail: `收录 ${integer.format(summary.posts)} 篇公开文章，共 ${integer.format(summary.words)} 字。`,
+  },
+  {
+    id: "taxonomy",
+    eyebrow: "INDEX",
+    title: "内容索引",
+    image: taxonomyIndexImage,
+    values: [
+      { value: formatValue(summary.categories), label: "分类" },
+      { value: formatValue(summary.tags), label: "标签" },
+    ],
+    detail: `内容分布在 ${integer.format(summary.categories)} 个分类与 ${integer.format(summary.tags)} 个导航标签中。`,
+  },
+  {
+    id: "activity",
+    eyebrow: "ACTIVITY",
+    title: "代码活动",
+    image: codeTerminalImage,
+    values: [
+      { value: formatValue(summary.contributions, "compact"), label: "年度贡献" },
+      { value: formatValue(summary.activeDays), label: "活跃天数" },
+    ],
+    detail: summary.contributions === null
+      ? "GitHub 贡献快照尚未生成，文章与项目数据仍可正常浏览。"
+      : `过去一年记录 ${integer.format(summary.contributions)} 次贡献，活跃 ${integer.format(summary.activeDays ?? 0)} 天。`,
+  },
+  {
+    id: "projects",
+    eyebrow: "LAB",
+    title: "实验项目",
+    image: automatedTestingImage,
+    values: [
+      { value: formatValue(summary.projects), label: "项目" },
+      { value: formatValue(summary.languages), label: "主要语言" },
+    ],
+    detail: `当前整理 ${integer.format(summary.projects)} 个实验项目，覆盖 ${integer.format(summary.languages)} 种主要语言。`,
+  },
+] as const;
+
+const connectIcons = {
+  github: GitFork,
+  email: Mail,
+  rss: Rss,
+  bilibili: MonitorPlay,
+} as const;
+
+const skillIcons = {
+  astro: Blocks,
+  typescript: Braces,
+  css: Palette,
+  playwright: MonitorPlay,
+  vitest: TestTubeDiagonal,
+} as const;
+
+const connectGroups = [false, true] as const;
+const skillGroups = [false, true] as const;
+---
+
+<section
+  class="home-data-layer"
+  id="lab-feed"
+  aria-labelledby="lab-feed-title"
+  aria-hidden="true"
+  inert
+  data-home-data-layer
+>
+  <div class="home-data-layer__inner">
+    <header
+      class="home-data-layer__header"
+      data-home-reveal="heading"
+      data-home-reveal-start="0.10"
+      data-home-reveal-end="0.30"
+    >
+      <p>ARCHIVE / DEV ACTIVITY / CONNECT / STACK</p>
+      <h2 id="lab-feed-title">LAB INDEX</h2>
+    </header>
+
+    <div class="home-data-layer__grid">
+      {
+        cards.map((card, index) => {
+          const revealStart = 0.3 + index * 0.055;
+          const revealEnd = 0.5 + index * 0.06;
+          return (
+            <button
+              class={`home-data-card home-data-card--${card.id}`}
+              type="button"
+              aria-pressed="false"
+              data-home-activatable
+              data-home-reveal={`card-${index + 1}`}
+              data-home-reveal-start={revealStart.toFixed(3)}
+              data-home-reveal-end={revealEnd.toFixed(3)}
+            >
+              <span class="home-data-card__media" aria-hidden="true">
+                <Picture
+                  src={card.image}
+                  alt=""
+                  widths={[160, 240, 320]}
+                  sizes="(max-width: 520px) 70px, (max-width: 900px) 82px, (max-width: 1180px) 62px, 74px"
+                  formats={["avif", "webp"]}
+                  fallbackFormat="webp"
+                  quality={68}
+                  loading="lazy"
+                  decoding="async"
+                  fetchpriority="low"
+                />
+              </span>
+              <span class="home-data-card__body">
+                <span class="home-data-card__eyebrow">{card.eyebrow}</span>
+                <span class="home-data-card__title">{card.title}</span>
+                <span class="home-data-card__metrics">
+                  {card.values.map((metric) => (
+                    <span>
+                      <strong>{metric.value}</strong>
+                      <small>{metric.label}</small>
+                    </span>
+                  ))}
+                </span>
+                <span class="home-data-card__detail">{card.detail}</span>
+                {
+                  card.id === "activity" && summary.contributionStale && summary.contributionGeneratedAt && (
+                    <span class="home-data-card__stale">数据截至 {summary.contributionGeneratedAt.slice(0, 10)}</span>
+                  )
+                }
+              </span>
+            </button>
+          );
+        })
+      }
+    </div>
+
+    <section
+      class="home-data-loop"
+      aria-labelledby="home-connect-title"
+      data-home-reveal="connect"
+      data-home-reveal-start="0.66"
+      data-home-reveal-end="0.84"
+    >
+      <header class="home-data-loop__header">
+        <h3 id="home-connect-title">CONNECT</h3>
+        <span>find me online</span>
+      </header>
+      <div class="home-data-loop__viewport" data-home-loop>
+        <div class="home-data-loop__track home-data-loop__track--connect">
+          {
+            connectGroups.map((clone) => (
+              <div
+                class="home-data-loop__group"
+                aria-hidden={clone ? "true" : undefined}
+                data-home-loop-clone={clone ? "true" : undefined}
+              >
+                {HOME_CONNECT_LINKS.map((item: HomeConnectItem) => {
+                  const Icon = connectIcons[item.id];
+                  return item.href ? (
+                    <a
+                      class="home-data-chip home-data-chip--connect"
+                      href={item.href}
+                      target={item.external ? "_blank" : undefined}
+                      rel={item.external ? "noopener noreferrer" : undefined}
+                      tabindex={clone ? -1 : undefined}
+                    >
+                      <Icon size={19} aria-hidden="true" />
+                      <span><strong>{item.label}</strong><small>{item.detail}</small></span>
+                    </a>
+                  ) : (
+                    <span class="home-data-chip home-data-chip--connect is-disabled" aria-disabled="true">
+                      <Icon size={19} aria-hidden="true" />
+                      <span><strong>{item.label}</strong><small>{item.detail}</small></span>
+                    </span>
+                  );
+                })}
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="home-data-loop"
+      aria-labelledby="home-stack-title"
+      data-home-reveal="stack"
+      data-home-reveal-start="0.82"
+      data-home-reveal-end="0.95"
+    >
+      <header class="home-data-loop__header">
+        <h3 id="home-stack-title">STACK</h3>
+        <span>this blog runs on</span>
+      </header>
+      <div class="home-data-loop__viewport" data-home-loop>
+        <div class="home-data-loop__track home-data-loop__track--stack">
+          {
+            skillGroups.map((clone) => (
+              <div
+                class="home-data-loop__group"
+                aria-hidden={clone ? "true" : undefined}
+                data-home-loop-clone={clone ? "true" : undefined}
+              >
+                {HOME_SKILLS.map((item: HomeSkillItem) => {
+                  const Icon = skillIcons[item.id];
+                  return (
+                    <button
+                      class="home-data-chip home-data-chip--skill"
+                      type="button"
+                      aria-pressed="false"
+                      tabindex={clone ? -1 : undefined}
+                      data-home-activatable={clone ? undefined : "true"}
+                    >
+                      <Icon size={19} aria-hidden="true" />
+                      <span><strong>{item.label}</strong><small>{item.detail}</small></span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+  </div>
+</section>

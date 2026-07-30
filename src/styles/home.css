@@ -999,231 +999,10 @@ html.command-palette-open .sakura-layer span {
   opacity: 1;
 }
 
-/* .home-next__intro 系列规则已随标记一并移除（页面无此元素，且其 backdrop-filter 是性能反模式）。 */
-
-/* ==========================================================================
-   第二屏内容带（feed-content）
-   布局原则：左侧内容带 + 右侧立绘安全区，UI 不进入右侧约 40%，
-   让立绘人物成为视线落点；标签收束为底部单排 dock，不再是视觉主体。
-   可读性只用单层静态 scrim；禁止 blur/backdrop-filter（性能反模式）。
-   ========================================================================== */
-.feed-content {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  width: min(600px, 58%);
-  padding-right: clamp(16px, 2vw, 32px);
-  padding-left: clamp(26px, 5vw, 88px);
-  color: rgba(255, 255, 255, 0.94);
-}
-
-/* 单层静态 scrim：只罩内容带、不碰立绘，向左缘收敛保证文字对比度。 */
-.feed-content::before {
-  position: absolute;
-  inset: 12% -8% 12% clamp(8px, 2vw, 40px);
-  z-index: -1;
-  content: "";
-  border-radius: 28px;
-  background: linear-gradient(90deg, rgba(15, 22, 34, 0.38), rgba(15, 22, 34, 0.14) 62%, transparent);
-  pointer-events: none;
-}
-
-.feed-content__eyebrow {
-  margin: 0 0 14px;
-  font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
-  font-size: clamp(0.62rem, 0.9vw, 0.74rem);
-  letter-spacing: 0.16em;
-  white-space: nowrap;
-  color: rgba(255, 221, 235, 0.9);
-  text-shadow: 0 2px 14px rgba(12, 18, 28, 0.4);
-}
-
-.feed-content__title {
-  margin: 0 0 18px;
-  font-family: var(--cute-font);
-  font-size: clamp(3.2rem, 7vw, 6.4rem);
-  line-height: 1.02;
-  letter-spacing: 0.01em;
-  color: #fff6fb;
-  text-shadow:
-    0 2px 0 rgba(255, 255, 255, 0.35),
-    0 10px 34px rgba(12, 18, 28, 0.35),
-    0 24px 60px rgba(242, 154, 189, 0.25);
-}
-
-.feed-content__tagline {
-  max-width: 430px;
-  margin: 0 0 26px;
-  font-size: clamp(0.95rem, 1.35vw, 1.1rem);
-  line-height: 1.9;
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 2px 16px rgba(12, 18, 28, 0.42);
-}
-
-.feed-content__cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 0 0 30px;
-}
-
-.feed-cta {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  padding: 0 26px;
-  font-size: 0.98rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-decoration: none;
-  transition:
-    translate 180ms ease,
-    box-shadow 180ms ease,
-    background-color 180ms ease;
-}
-
-.feed-cta--primary {
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: linear-gradient(135deg, var(--pink) 0%, #e57ba9 100%);
-  color: #fff;
-  box-shadow: 0 12px 28px rgba(226, 123, 169, 0.4);
-}
-
-.feed-cta--secondary {
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.86);
-  color: #4f5b72;
-}
-
-.feed-cta:hover,
-.feed-cta:focus-visible {
-  translate: 0 -3px;
-  box-shadow: 0 18px 36px rgba(24, 34, 48, 0.28);
-  outline: 0;
-}
-
-.feed-cta:active {
-  scale: 0.97;
-}
-
-.feed-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.feed-tags__tag {
-  display: inline-flex;
-  min-height: 34px;
-  align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  color: #4f5b72;
-  padding: 0 15px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition:
-    translate 180ms ease,
-    background-color 180ms ease,
-    color 180ms ease;
-}
-
-.feed-tags__tag:hover,
-.feed-tags__tag:focus-visible {
-  background: rgba(255, 255, 255, 0.92);
-  color: #26334b;
-  translate: 0 -2px;
-  outline: 0;
-}
-
-/* 「+N」折叠入口：与标签同形但反色，提示它是导航而非标签。 */
-.feed-tags__tag--more {
-  border-style: dashed;
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(53, 62, 78, 0.55);
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.feed-tags__tag--more:hover,
-.feed-tags__tag--more:focus-visible {
-  background: rgba(53, 62, 78, 0.72);
-  color: #fff;
-}
-
-/* 入场 stagger：总时长 ≤720ms，之后全静止；reduced-motion 直接呈现终态。 */
-.feed-content > * {
-  opacity: 0;
-  animation: feed-content-rise 480ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-}
-
-.feed-content > *:nth-child(2) { animation-delay: 60ms; }
-.feed-content > *:nth-child(3) { animation-delay: 120ms; }
-.feed-content > *:nth-child(4) { animation-delay: 180ms; }
-.feed-content > *:nth-child(5) { animation-delay: 240ms; }
-
-@keyframes feed-content-rise {
-  from { opacity: 0; translate: 0 14px; }
-  to { opacity: 1; translate: 0 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .feed-content > * {
-    opacity: 1;
-    animation: none;
-  }
-}
-
-@media (max-width: 900px) {
-  .feed-content {
-    right: 0;
-    width: auto;
-    justify-content: flex-end;
-    padding: 0 22px 64px;
-  }
-
-  .feed-content::before {
-    inset: auto -10px 0;
-    border-radius: 0;
-    background: linear-gradient(180deg, transparent, rgba(15, 22, 34, 0.36) 38%);
-  }
-
-  .feed-content__title {
-    font-size: clamp(2.6rem, 11vw, 4.6rem);
-  }
-
-  .feed-content__tagline {
-    font-size: 0.95rem;
-  }
-
-  /* 移动端标签 dock 转横向滚动条，隐藏滚动条但保留滑动语义。 */
-  .feed-tags {
-    flex-wrap: nowrap;
-    margin: 0 -22px;
-    padding: 4px 22px 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .feed-tags::-webkit-scrollbar {
-    display: none;
-  }
-
-  .feed-tags__tag {
-    flex: none;
-  }
-}
-
 .home-page .home-shell {
   --home-layer-split-y: 100%;
   --home-layer-progress: 0;
+  --home-data-progress: 0;
   --home-footer-reveal-space: clamp(120px, 14vh, 180px);
   min-height: calc(200svh + var(--home-footer-reveal-space));
 }
@@ -1365,9 +1144,9 @@ html.command-palette-open .sakura-layer span {
 @media (max-width: 900px) {
 
   /* 移动端没有可靠的 hover 唤回入口，滚过首屏后必须保持完整导航可见且可横滑。 */
-  .home-page .site-header--brandless .nav-pill,
-  .home-page.is-past-hero .site-header--brandless .nav-pill,
-  .home-page .site-header--brandless.is-nav-returning .nav-pill {
+  body.home-page .site-header--brandless .nav-pill,
+  body.home-page.is-past-hero .site-header--brandless .nav-pill,
+  body.home-page .site-header--brandless.is-nav-returning .nav-pill {
     width: 100%;
     max-width: 100%;
     min-height: 64px;
@@ -1377,20 +1156,28 @@ html.command-palette-open .sakura-layer span {
     animation: none;
   }
 
-  .home-page.is-past-hero .site-header--brandless .nav-link,
-  .home-page .site-header--brandless.is-nav-returning .nav-link {
+  body.home-page.is-past-hero .site-header--brandless .nav-link,
+  body.home-page .site-header--brandless.is-nav-returning .nav-link {
     min-width: 82px;
     width: auto;
     opacity: 1;
     transition-delay: 0s;
   }
 
-  .home-page.is-past-hero .site-header--brandless .nav-command-trigger,
-  .home-page .site-header--brandless.is-nav-returning .nav-command-trigger {
+  body.home-page.is-past-hero .site-header--brandless .nav-command-trigger,
+  body.home-page .site-header--brandless.is-nav-returning .nav-command-trigger {
     min-width: 92px;
     width: auto;
     opacity: 1;
     transition-delay: 0s;
+  }
+
+  /* bookmark 与 hover-zone 是桌面收起导航的唤回入口；触屏端始终展示完整导航。 */
+  body.home-page .site-header--brandless .nav-bookmark,
+  body.home-page .site-header--brandless .nav-hover-zone,
+  body.home-page.is-past-hero .site-header--brandless .nav-bookmark,
+  body.home-page.is-past-hero .site-header--brandless .nav-hover-zone {
+    display: none;
   }
 
   .announcement-widget {
@@ -1724,4 +1511,58 @@ html.command-palette-open .sakura-layer span {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+}
+
+@media (max-width: 900px) {
+  /* 移动端让第二屏回到文档流：首屏保持 sticky，数据层连同背景从底部自然覆盖。 */
+  .home-page .home-shell {
+    min-height: auto;
+  }
+
+  .home-layer-stage {
+    position: relative;
+    top: auto;
+    height: auto;
+    min-height: 0;
+    overflow: clip;
+  }
+
+  .home-layer-stage .home-layer--hero {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    height: 100svh;
+    min-height: 620px;
+    clip-path: none;
+  }
+
+  .home-layer-stage .home-layer--feed {
+    position: absolute;
+    inset: 100svh 0 0;
+    z-index: 3;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    clip-path: none;
+  }
+
+  .home-layer-stage .home-next__inner {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .home-layer-stage .page-divider {
+    top: 100svh;
+  }
+
+  .home-page .site-footer,
+  .home-page.is-home-footer-visible .site-footer {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
 }

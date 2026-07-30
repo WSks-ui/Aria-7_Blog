@@ -1,15 +1,11 @@
 ---
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 import { Code2, PenLine } from "@lucide/astro";
 import {
   aggregateDates,
   buildHeatmapModel,
-  isSnapshotStale,
-  parseSnapshot,
-  snapshotToCounts,
   type HeatmapModel,
 } from "../utils/contributionHeatmap";
+import { loadContributionSnapshotState } from "../utils/contributionSnapshot";
 import { toDateKey } from "../scripts/core/time";
 
 interface Props {
@@ -23,24 +19,10 @@ const endDate = toDateKey(buildTime);
 // 快照缺失 = 代码模式整体隐藏（未运行过抓取脚本）；
 // 快照损坏 = 构建期直接报错——两者必须分开，坏数据不该静默上线。
 // 注意不能用 import.meta.url 定位：构建期组件会被编译到临时目录，路径失真。
-let codeModel: HeatmapModel | null = null;
-let snapshotGeneratedAt = "";
-let snapshotStale = false;
-const rawSnapshot = await readFile(
-  resolve(process.cwd(), "src/data/github-contributions.json"),
-  "utf8",
-).catch(() => null);
-if (rawSnapshot) {
-  const snapshot = parseSnapshot(JSON.parse(rawSnapshot));
-  if (!snapshot) {
-    throw new Error(
-      "[heatmap] src/data/github-contributions.json 未通过校验，请运行 npm run fetch:contributions 重新生成",
-    );
-  }
-  codeModel = buildHeatmapModel(snapshotToCounts(snapshot), endDate);
-  snapshotGeneratedAt = snapshot.generatedAt;
-  snapshotStale = isSnapshotStale(snapshot.generatedAt, buildTime);
-}
+const snapshotState = await loadContributionSnapshotState(buildTime);
+const codeModel: HeatmapModel | null = snapshotState?.model ?? null;
+const snapshotGeneratedAt = snapshotState?.generatedAt ?? "";
+const snapshotStale = snapshotState?.stale ?? false;
 
 const writingModel = buildHeatmapModel(aggregateDates(postDates), endDate);
 const defaultMode = codeModel ? "code" : "writing";
