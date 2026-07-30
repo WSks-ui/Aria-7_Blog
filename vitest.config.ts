@@ -15,6 +15,7 @@ export default defineConfig({
         "src/utils/blogStats.ts",
         "src/utils/postMetrics.ts",
         "src/utils/contributionHeatmap.ts",
+        "src/utils/contributionSnapshot.ts",
         "src/lib/images.ts",
         "src/plugins/rehype-image-performance.mjs",
         "scripts/lib/github-contributions.mjs",
