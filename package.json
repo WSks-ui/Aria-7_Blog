@@ -26,7 +26,7 @@
     "@lucide/astro": "1.25.0",
     "astro": "7.1.1",
     "chess.js": "^1.4.0",
-    "image-size": "2.0.2"
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.9",
@@ -46,11 +46,17 @@
   },
   "overrides": {
     "@astrojs/language-server": "2.16.13",
-    "brace-expansion": "5.0.8",
-    "fast-uri": "4.1.1",
+    "brace-expansion": "5.0.9",
+    "fast-uri": "4.1.2",
+    "js-yaml": "4.3.1",
+    "nanoid": "3.3.17",
     "sharp": "0.35.3",
     "svgo": "4.0.2",
-    "tmp": "0.2.7"
+    "tmp": "0.2.7",
+    "uuid": "11.1.1",
+    "@lhci/utils": {
+      "js-yaml": "3.15.1"
+    }
   },
   "description": "Aria-7th Lab：使用 Astro 构建的静态个人博客与实验空间。",
   "keywords": [

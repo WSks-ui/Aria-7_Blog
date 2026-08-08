@@ -1,7 +1,7 @@
-import { readFile, realpath } from "node:fs/promises";
+import { realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 
-import { imageSize } from "image-size";
+import sharp from "sharp";
 
 export interface ImageDimensions {
   width: number;
@@ -65,7 +65,9 @@ export async function readPublicImageDimensions(
 
   let dimensions;
   try {
-    dimensions = imageSize(await readFile(realImagePath));
+    // sharp 的元数据读取不会走 image-size 中存在 DoS 风险的 ICNS/JXL/HEIF 解析器，
+    // 同时直接使用已经在构建脚本中依赖的图像后端，避免维护两套图片解析实现。
+    dimensions = await sharp(realImagePath).metadata();
   } catch (error) {
     throw new Error(`无法解析本地图片尺寸：${source}`, { cause: error });
   }
