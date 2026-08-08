@@ -6,10 +6,13 @@ import {
   Disc3,
   FolderOpen,
   ListMusic,
+  Monitor,
+  Moon,
   Pause,
   Radio,
   Play,
   Sparkles,
+  Sun,
   Volume2,
 } from "@lucide/astro";
 import { SITE_STARTED_AT } from "../site-config";
@@ -156,6 +159,27 @@ import { SITE_STARTED_AT } from "../site-config";
             </button>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="theme-card" aria-label="外观设置">
+      <div class="theme-card__title">
+        <span aria-hidden="true"><Moon size={18} /></span>
+        <strong>外观</strong>
+      </div>
+      <div class="theme-card__choices" role="radiogroup" aria-label="主题模式">
+        <button type="button" role="radio" aria-checked="false" data-theme-choice="light">
+          <Sun size={15} aria-hidden="true" />
+          <span>亮色</span>
+        </button>
+        <button type="button" role="radio" aria-checked="false" data-theme-choice="dark">
+          <Moon size={15} aria-hidden="true" />
+          <span>暗色</span>
+        </button>
+        <button type="button" role="radio" aria-checked="true" data-theme-choice="system">
+          <Monitor size={15} aria-hidden="true" />
+          <span>跟随系统</span>
+        </button>
       </div>
     </section>
 

@@ -1185,3 +1185,430 @@
     flex: 1;
   }
 }
+
+/* ============================================================
+   暗色主题覆盖（文章页）
+   代码块（pre/token）本身即深色设计，无需覆盖。
+   ============================================================ */
+[data-theme="dark"] .article-frame.is-article-acrylic .article-shell {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05)),
+    rgba(34, 38, 58, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 30px 90px rgba(3, 4, 10, 0.4);
+}
+
+[data-theme="dark"] .article-frame.is-article-acrylic .comments-shell {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(159, 216, 239, 0.05)),
+    rgba(34, 38, 58, 0.6);
+}
+
+[data-theme="dark"] .article-frame.is-article-glass .article-shell {
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(159, 216, 239, 0.04)),
+    rgba(34, 38, 58, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 30px 90px rgba(3, 4, 10, 0.36);
+}
+
+[data-theme="dark"] .article-frame.is-article-glass .comments-shell {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(159, 216, 239, 0.04)),
+    rgba(34, 38, 58, 0.4);
+}
+
+[data-theme="dark"] .comments-shell {
+  background: rgba(34, 38, 58, 0.6);
+}
+
+[data-theme="dark"] .comments-shell__header span {
+  color: #d0a3bb;
+}
+
+[data-theme="dark"] .comments-shell__header strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .comments-shell__header p {
+  color: #b7bdd4;
+}
+
+[data-theme="dark"] .article-topic-bar {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(110deg, rgba(255, 255, 255, 0.07), rgba(159, 216, 239, 0.05) 42%, rgba(255, 255, 255, 0.05)),
+    rgba(34, 38, 58, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 36px rgba(3, 4, 10, 0.3);
+}
+
+[data-theme="dark"] .article-topic-pill {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  color: #c3c9dd;
+}
+
+[data-theme="dark"] .article-topic-pill--home {
+  background: rgba(216, 118, 157, 0.18);
+  color: #f0b7cf;
+}
+
+[data-theme="dark"] .article-progress {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05)),
+    rgba(34, 38, 58, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 46px rgba(3, 4, 10, 0.34);
+}
+
+[data-theme="dark"] .article-progress span,
+[data-theme="dark"] .article-progress strong {
+  color: #d0a3bb;
+}
+
+/* 正文排版 */
+[data-theme="dark"] .article-content {
+  color: #cdd3e6;
+}
+
+[data-theme="dark"] .article-content h1,
+[data-theme="dark"] .article-content h2,
+[data-theme="dark"] .article-content h3,
+[data-theme="dark"] .article-content h4 {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .article-content p,
+[data-theme="dark"] .article-content li {
+  color: #cdd3e6;
+}
+
+[data-theme="dark"] .article-content li::marker {
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .article-content hr {
+  background: linear-gradient(90deg, transparent, rgba(166, 171, 194, 0.3), transparent);
+}
+
+[data-theme="dark"] .article-content a {
+  color: #8fc3e8;
+  text-decoration-color: rgba(143, 195, 232, 0.3);
+}
+
+[data-theme="dark"] .article-content a:hover {
+  color: #eba8c4;
+  text-decoration-color: rgba(235, 168, 196, 0.4);
+}
+
+[data-theme="dark"] .article-content code {
+  background: rgba(159, 216, 239, 0.14);
+  color: #a9d4ea;
+}
+
+[data-theme="dark"] .article-content pre {
+  border-color: rgba(255, 255, 255, 0.09);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(24, 28, 42, 0.98);
+  box-shadow: 0 16px 42px rgba(3, 4, 10, 0.4);
+}
+
+[data-theme="dark"] .article-content table th,
+[data-theme="dark"] .article-content table td {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .article-header__stats span,
+[data-theme="dark"] .article-meta span {
+  color: #b7bdd4;
+}
+
+[data-theme="dark"] .article-header h1 {
+  color: #eceef7;
+}
+
+/* 相关文章 / 上下篇 */
+[data-theme="dark"] .article-relation-link,
+[data-theme="dark"] .article-relations__group {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(89, 204, 154, 0.04)),
+    rgba(34, 38, 58, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 48px rgba(3, 4, 10, 0.3);
+}
+
+[data-theme="dark"] .article-relation-link {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .article-relation-link:hover {
+  border-color: rgba(89, 204, 154, 0.44);
+  background: rgba(89, 204, 154, 0.1);
+}
+
+[data-theme="dark"] .article-relation-link small {
+  color: rgba(196, 201, 221, 0.62);
+}
+
+[data-theme="dark"] .article-relation-link strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .article-relation-link svg,
+[data-theme="dark"] .article-relations__group h2 svg {
+  color: #7fd9b2;
+}
+
+[data-theme="dark"] .article-relations__group h2 {
+  color: #eceef7;
+}
+
+/* ============================================================
+   暗色主题覆盖（文章页）
+   代码块（pre/token）本身即深色设计，无需覆盖。
+   ============================================================ */
+[data-theme="dark"] .article-frame.is-article-acrylic .article-shell {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05)),
+    rgba(34, 38, 58, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 30px 90px rgba(3, 4, 10, 0.4);
+}
+
+[data-theme="dark"] .article-frame.is-article-acrylic .comments-shell {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(159, 216, 239, 0.05)),
+    rgba(34, 38, 58, 0.6);
+}
+
+[data-theme="dark"] .article-frame.is-article-glass .article-shell {
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(159, 216, 239, 0.04)),
+    rgba(34, 38, 58, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 30px 90px rgba(3, 4, 10, 0.36);
+}
+
+[data-theme="dark"] .article-frame.is-article-glass .comments-shell {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(159, 216, 239, 0.04)),
+    rgba(34, 38, 58, 0.4);
+}
+
+[data-theme="dark"] .comments-shell {
+  background: rgba(34, 38, 58, 0.6);
+}
+
+[data-theme="dark"] .comments-shell__header span {
+  color: #d0a3bb;
+}
+
+[data-theme="dark"] .comments-shell__header strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .comments-shell__header p {
+  color: #b7bdd4;
+}
+
+[data-theme="dark"] .article-topic-bar {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(110deg, rgba(255, 255, 255, 0.07), rgba(159, 216, 239, 0.05) 42%, rgba(255, 255, 255, 0.05)),
+    rgba(34, 38, 58, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 36px rgba(3, 4, 10, 0.3);
+}
+
+[data-theme="dark"] .article-topic-pill {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  color: #c3c9dd;
+}
+
+[data-theme="dark"] .article-topic-pill--home {
+  background: rgba(216, 118, 157, 0.18);
+  color: #f0b7cf;
+}
+
+[data-theme="dark"] .article-progress {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05)),
+    rgba(34, 38, 58, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 46px rgba(3, 4, 10, 0.34);
+}
+
+[data-theme="dark"] .article-progress span,
+[data-theme="dark"] .article-progress strong {
+  color: #d0a3bb;
+}
+
+/* 正文排版 */
+[data-theme="dark"] .article-content {
+  color: #cdd3e6;
+}
+
+[data-theme="dark"] .article-content h1,
+[data-theme="dark"] .article-content h2,
+[data-theme="dark"] .article-content h3,
+[data-theme="dark"] .article-content h4 {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .article-content p,
+[data-theme="dark"] .article-content li {
+  color: #cdd3e6;
+}
+
+[data-theme="dark"] .article-content li::marker {
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .article-content hr {
+  background: linear-gradient(90deg, transparent, rgba(166, 171, 194, 0.3), transparent);
+}
+
+[data-theme="dark"] .article-content a {
+  color: #8fc3e8;
+  text-decoration-color: rgba(143, 195, 232, 0.3);
+}
+
+[data-theme="dark"] .article-content a:hover {
+  color: #eba8c4;
+  text-decoration-color: rgba(235, 168, 196, 0.4);
+}
+
+[data-theme="dark"] .article-content code {
+  background: rgba(159, 216, 239, 0.14);
+  color: #a9d4ea;
+}
+
+[data-theme="dark"] .article-content pre {
+  border-color: rgba(255, 255, 255, 0.09);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(24, 28, 42, 0.98);
+  box-shadow: 0 16px 42px rgba(3, 4, 10, 0.4);
+}
+
+[data-theme="dark"] .article-content table th,
+[data-theme="dark"] .article-content table td {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .article-header__stats span,
+[data-theme="dark"] .article-meta span {
+  color: #b7bdd4;
+}
+
+[data-theme="dark"] .article-header h1 {
+  color: #eceef7;
+}
+
+/* 相关文章 / 上下篇 */
+[data-theme="dark"] .article-relation-link,
+[data-theme="dark"] .article-relations__group {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(89, 204, 154, 0.04)),
+    rgba(34, 38, 58, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 48px rgba(3, 4, 10, 0.3);
+}
+
+[data-theme="dark"] .article-relation-link {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .article-relation-link:hover {
+  border-color: rgba(89, 204, 154, 0.44);
+  background: rgba(89, 204, 154, 0.1);
+}
+
+[data-theme="dark"] .article-relation-link small {
+  color: rgba(196, 201, 221, 0.62);
+}
+
+[data-theme="dark"] .article-relation-link strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .article-relation-link svg,
+[data-theme="dark"] .article-relations__group h2 svg {
+  color: #7fd9b2;
+}
+
+[data-theme="dark"] .article-relations__group h2 {
+  color: #eceef7;
+}
+
+/* —— 暗色：文章页侧栏卡片与目录 —— */
+[data-theme="dark"] .article-stat-card,
+[data-theme="dark"] .article-toc-card,
+[data-theme="dark"] .article-page .article-view-toggle,
+[data-theme="dark"] .article-page .article-progress {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(159, 216, 239, 0.04)),
+    rgba(34, 38, 58, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 22px 58px rgba(3, 4, 10, 0.36);
+}
+
+[data-theme="dark"] .article-stat-card h2,
+[data-theme="dark"] .article-toc-card h2 {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .article-stat-list dt {
+  color: #b7bdd4;
+}
+
+[data-theme="dark"] .article-stat-list dt svg {
+  color: #7fd9b2;
+}
+
+[data-theme="dark"] .article-stat-list dd {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .article-toc-list a {
+  color: #b7bdd4;
+}
+
+[data-theme="dark"] .article-toc-list a:hover,
+[data-theme="dark"] .article-toc-list a:focus-visible {
+  color: #7fd9b2;
+}
+
+[data-theme="dark"] .article-toc-list li.is-active > a {
+  background: rgba(89, 204, 154, 0.14);
+  color: #7fd9b2;
+}
+
+[data-theme="dark"] .article-toc-empty {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .article-view-toggle {
+  color: #c3c9dd;
+}

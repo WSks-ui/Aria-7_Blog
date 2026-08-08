@@ -30,6 +30,9 @@ const pageTitle = title === "Aria-7th Lab" ? title : `${title} | Aria-7th Lab`;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
+    {/* 主题初始化必须同步加载且在样式表之前：渲染前应用 data-theme，防暗色用户看到白闪（FOUC）。
+        文件 ~1KB，CSP script-src 'self' 合规（内联脚本被禁，故为外部文件）。 */}
+    <script is:inline src="/theme-init.js"></script>
     <title>{pageTitle}</title>
     <SeoHead title={pageTitle} description={description} seo={seo} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />

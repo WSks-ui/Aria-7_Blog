@@ -230,7 +230,9 @@ const articleSeo = {
               )
             }
           </header>
-          <div class="article-content">
+          <!-- data-pagefind-body：全文搜索只索引正文区域（页头元信息、导航、评论区不进索引）；
+               meta title 保证命令面板结果标题不带站点后缀。 -->
+          <div class="article-content" data-pagefind-body data-pagefind-meta={`title:${title}`}>
             <slot />
           </div>
         </article>

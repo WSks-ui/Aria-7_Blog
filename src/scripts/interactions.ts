@@ -16,6 +16,10 @@ declare global {
     querySelector(selectors: string): any;
     querySelectorAll(selectors: string): NodeListOf<any>;
   }
+  interface Window {
+    /** /theme-init.js 暴露的主题切换接口（亮/暗/跟随系统） */
+    __ariaSetTheme?: (mode: string) => void;
+  }
 }
 
 interface CommandEntry {
@@ -67,6 +71,33 @@ const fetchCommandIndex = (url: string): Promise<CommandEntry[]> => {
     });
   return commandIndexPromise;
 };
+
+// Pagefind 全文搜索通道（构建后由 `pagefind --site dist` 生成 /pagefind/）。
+// dev 模式索引不存在，动态 import 失败时静默降级为纯结构化搜索，不影响命令面板其他功能。
+interface PagefindResultData {
+  url: string;
+  excerpt: string;
+  meta?: { title?: string };
+}
+interface PagefindModule {
+  search: (query: string) => Promise<{ results: { data: () => Promise<PagefindResultData> }[] }>;
+}
+let pagefindPromise: Promise<PagefindModule | null> | null = null;
+// 构建期不存在于源码树的运行时产物，URL 变量化避免 TS/Vite 静态解析
+const pagefindModuleUrl = "/pagefind/pagefind.js";
+const ensurePagefind = (): Promise<PagefindModule | null> => {
+  if (!pagefindPromise) {
+    pagefindPromise = (import(/* @vite-ignore */ pagefindModuleUrl) as Promise<PagefindModule>)
+      .catch(() => {
+        pagefindPromise = null;
+        return null;
+      });
+  }
+  return pagefindPromise;
+};
+
+// pagefind excerpt 是带 <mark> 的 HTML；转纯文本后交给面板既有高亮逻辑，避免向内层 DOM 注入 HTML。
+const stripExcerptTags = (value: string): string => value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 
 export const initInteractions = (providedScope?: PageScope): (() => void) | undefined => {
   if (document.body.dataset.ariaInteractionsReady === "true") return;
@@ -293,6 +324,51 @@ export const initInteractions = (providedScope?: PageScope): (() => void) | unde
         .map(({ entry }) => entry);
     };
 
+    // —— Pagefind 全文搜索通道：异步补充正文命中，与结构化结果合并 ——
+    let fulltextEntries: CommandEntry[] = [];
+    let fulltextQuery = "";
+    let fulltextGeneration = 0;
+    let fulltextTimer = 0;
+
+    const runFulltextSearch = async (query: string) => {
+      const generation = ++fulltextGeneration;
+      const pagefind = await ensurePagefind();
+      if (!pagefind || scope.disposed || generation !== fulltextGeneration) return;
+      try {
+        const search = await pagefind.search(query);
+        const results = await Promise.all(search.results.slice(0, 5).map((item) => item.data()));
+        if (scope.disposed || generation !== fulltextGeneration) return;
+        fulltextQuery = query;
+        fulltextEntries = results.map((data) => ({
+          id: `fulltext:${data.url}`,
+          kind: "post",
+          title: data.meta?.title || data.url,
+          description: stripExcerptTags(data.excerpt),
+          href: data.url,
+          group: "全文",
+          meta: "正文命中",
+        }));
+        renderResults();
+      } catch {
+        // 索引分片读取失败时保留结构化结果，不打断输入
+      }
+    };
+
+    const scheduleFulltextSearch = (parsed: { query: string; kind: string }) => {
+      window.clearTimeout(fulltextTimer);
+      if (!parsed.query || parsed.kind !== "all") {
+        fulltextGeneration += 1;
+        fulltextQuery = "";
+        fulltextEntries = [];
+        return;
+      }
+      const query = parsed.query;
+      fulltextTimer = window.setTimeout(() => {
+        void runFulltextSearch(query);
+      }, 120);
+    };
+    addPageCleanup(() => window.clearTimeout(fulltextTimer));
+
     const appendHighlightedText = (node: any, value: string, terms: string[]) => {
       node.replaceChildren();
       if (!terms.length) {
@@ -342,7 +418,14 @@ export const initInteractions = (providedScope?: PageScope): (() => void) | unde
     const renderResults = () => {
       if (!resultsRoot || !template) return;
       const parsedQuery = parseQuery(input?.value || "");
-      const matches = getMatches(parsedQuery);
+      const localMatches = getMatches(parsedQuery);
+      // 仅当全文结果属于当前查询时才合并（代次之外的旧结果直接丢弃），
+      // 本地精确结果让出后段位置，保证正文命中总能浮出水面。
+      const fulltextMatches =
+        parsedQuery.kind === "all" && parsedQuery.query && parsedQuery.query === fulltextQuery
+          ? fulltextEntries.filter((entry) => !localMatches.some((match) => match.href === entry.href))
+          : [];
+      const matches = [...localMatches.slice(0, 7), ...fulltextMatches].slice(0, maxResults);
       const recentIds = new Set(readRecentIds());
       activeItems = [];
       selectedIndex = 0;
@@ -412,6 +495,7 @@ export const initInteractions = (providedScope?: PageScope): (() => void) | unde
         button.setAttribute("aria-pressed", String(active));
       });
       renderResults();
+      scheduleFulltextSearch(parseQuery(input?.value || ""));
       void ensureCommandIndex();
       input?.focus({ preventScroll: true });
     };
@@ -466,10 +550,14 @@ export const initInteractions = (providedScope?: PageScope): (() => void) | unde
     closeButtons.forEach((button) => {
       onPage(button, "click", closeCommandPalette);
     });
-    onPage(input, "input", renderResults);
+    onPage(input, "input", () => {
+      renderResults();
+      scheduleFulltextSearch(parseQuery(input?.value || ""));
+    });
     onPage(clearButton, "click", () => {
       input.value = "";
       renderResults();
+      scheduleFulltextSearch(parseQuery(""));
       input.focus({ preventScroll: true });
     });
     onPage(clearRecentButton, "click", () => {
@@ -1076,6 +1164,29 @@ export const initInteractions = (providedScope?: PageScope): (() => void) | unde
       window.clearInterval(runtimeTimer);
       runtimeNode.removeAttribute("data-aria-runtime-ready");
     });
+  }
+
+  // 外观三模式切换（亮/暗/跟随系统）。主题本身由 /theme-init.js 在渲染前应用，
+  // 这里只负责面板状态同步与调用其暴露的全局接口。
+  const themeChoices = [...document.querySelectorAll("[data-theme-choice]")];
+  if (themeChoices.length) {
+    const syncThemeChoiceState = () => {
+      const mode = document.documentElement.getAttribute("data-theme-mode") || "system";
+      themeChoices.forEach((button) => {
+        const active = button.dataset.themeChoice === mode;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-checked", String(active));
+      });
+    };
+    themeChoices.forEach((button) => {
+      onPage(button, "click", () => {
+        window.__ariaSetTheme?.(button.dataset.themeChoice);
+        syncThemeChoiceState();
+      });
+    });
+    // 其他页签/系统变化导致的主题变更也要回同步面板
+    onPage(document, "astro:after-swap", syncThemeChoiceState);
+    syncThemeChoiceState();
   }
 
   document.querySelectorAll("[data-runtime-days]").forEach((node) => {

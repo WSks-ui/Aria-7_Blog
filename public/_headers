@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' https://giscus.app/client.js; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self' data: https://api.i-meto.com https://*.music.126.net; media-src 'self' https://api.i-meto.com https://*.music.126.net; connect-src 'self' https://api.i-meto.com; frame-src https://giscus.app; font-src 'self'; manifest-src 'self'; worker-src 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://giscus.app/client.js; script-src-attr 'none'; style-src 'self'; style-src-attr 'none'; img-src 'self' data: https://api.i-meto.com https://*.music.126.net; media-src 'self' https://api.i-meto.com https://*.music.126.net; connect-src 'self' https://api.i-meto.com; frame-src https://giscus.app; font-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
@@ -12,6 +12,9 @@
 
 /version.json
   Cache-Control: no-store
+
+/pagefind/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
 
 /images/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800

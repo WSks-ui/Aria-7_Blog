@@ -11,8 +11,8 @@
 
 :root {
   color-scheme: light;
-  --ink: #34394a;
-  --muted: #73798a;
+  --ink: var(--ink);
+  --muted: var(--muted);
   --soft: #f8f3f6;
   --paper: rgba(255, 255, 255, 0.72);
   --paper-strong: rgba(255, 255, 255, 0.88);
@@ -288,7 +288,7 @@ button {
   min-height: 70px;
   align-items: center;
   gap: 14px;
-  color: #465068;
+  color: var(--ink);
   font-size: clamp(1.05rem, 1.45vw, 1.34rem);
   font-weight: 800;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
@@ -361,7 +361,7 @@ button {
   justify-content: center;
   gap: 12px;
   border-radius: 999px;
-  color: #3d4355;
+  color: var(--ink);
   transition:
     transform 180ms ease,
     color 180ms ease;
@@ -379,7 +379,7 @@ button {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(225, 245, 255, 0.36)),
     rgba(255, 255, 255, 0.22);
-  color: #3d4355;
+  color: var(--ink);
   cursor: pointer;
   transition:
     transform 180ms ease,
@@ -390,7 +390,7 @@ button {
 
 .nav-command-trigger:hover,
 .nav-command-trigger:focus-visible {
-  color: #24334c;
+  color: var(--ink);
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(226, 248, 255, 0.54)),
     rgba(255, 255, 255, 0.42);
@@ -421,7 +421,7 @@ button {
 .nav-link:hover,
 .nav-link.active {
   transform: translateY(-1px);
-  color: #24334c;
+  color: var(--ink);
 }
 
 .nav-link strong,
@@ -535,7 +535,7 @@ button {
 
 .command-palette__title h2 {
   margin: 0;
-  color: #34394a;
+  color: var(--ink);
   font-family: var(--cute-font);
   font-size: 1.05rem;
   line-height: 1.15;
@@ -560,7 +560,7 @@ button {
   border: 1px solid rgba(131, 145, 166, 0.18);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.72);
-  color: #73798a;
+  color: var(--muted);
   cursor: pointer;
   transition: color 160ms ease, border-color 160ms ease, background 160ms ease, transform 160ms ease;
 }
@@ -613,7 +613,7 @@ button {
   min-width: 0;
   border: 0;
   background: transparent;
-  color: #26334b;
+  color: var(--ink);
   font: inherit;
   font-size: 0.9rem;
   outline: 0;
@@ -758,7 +758,7 @@ button {
   border: 1px solid transparent;
   border-radius: 8px;
   padding: 8px 11px;
-  color: #34394a;
+  color: var(--ink);
   opacity: 0;
   animation: commandResultIn 260ms cubic-bezier(0.18, 0.86, 0.22, 1) forwards;
   animation-delay: calc(var(--command-item-index, 0) * 22ms + 70ms);
@@ -827,7 +827,7 @@ button {
 }
 
 .command-result__body strong {
-  color: #2f3548;
+  color: var(--ink);
   font-size: 0.82rem;
 }
 
@@ -911,7 +911,7 @@ button {
 }
 
 .command-empty strong {
-  color: #465068;
+  color: var(--ink);
   font-size: 0.84rem;
 }
 
@@ -1246,7 +1246,7 @@ button {
   border-left: 0;
   border-radius: 0 22px 22px 0;
   background: transparent;
-  color: #56627b;
+  color: var(--muted);
   box-shadow:
     inset 1px 0 0 rgba(255, 255, 255, 0.72),
     inset 10px 0 18px rgba(255, 255, 255, 0.44),
@@ -1460,7 +1460,7 @@ button {
 
 .side-console__header strong {
   display: block;
-  color: #465068;
+  color: var(--ink);
   font-size: 1.08rem;
   font-weight: 900;
 }
@@ -1495,7 +1495,7 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #465068;
+  color: var(--ink);
 }
 
 .music-card__title span {
@@ -1509,7 +1509,7 @@ button {
 }
 
 .music-card__title strong {
-  color: #465068;
+  color: var(--ink);
   font-size: 1.2rem;
   font-weight: 900;
 }
@@ -1714,7 +1714,7 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.56);
-  color: #5f6b83;
+  color: var(--muted);
   padding: 0 12px;
   font-size: 0.82rem;
   font-weight: 900;
@@ -1824,7 +1824,7 @@ button {
 }
 
 .music-progress__label strong {
-  color: #465068;
+  color: var(--ink);
   font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
 }
 
@@ -2051,7 +2051,7 @@ button {
 }
 
 .site-runtime strong {
-  color: #465068;
+  color: var(--ink);
   font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
   font-size: 1.16rem;
   line-height: 1.3;
@@ -3246,4 +3246,1214 @@ button {
       #fbf8f5;
     background-attachment: scroll;
   }
+}
+
+/* ============================================================
+   暗色主题（[data-theme="dark"]，由 head 防闪烁脚本在渲染前应用）
+   策略：核心语义变量整体换值，硬编码浅色的组件逐域覆盖；
+   pastel 主色保持不变——深色底上粉/蓝/薄荷依然有辨识度。
+   ============================================================ */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e8eaf4;
+  --muted: #a6abc2;
+  --soft: #252840;
+  --paper: rgba(34, 38, 58, 0.72);
+  --paper-strong: rgba(34, 38, 58, 0.9);
+  --line: rgba(255, 255, 255, 0.14);
+  --shadow: 0 24px 80px rgba(5, 7, 15, 0.52);
+}
+
+[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 16% 18%, rgba(242, 154, 189, 0.1), transparent 28%),
+    radial-gradient(circle at 78% 14%, rgba(159, 216, 239, 0.1), transparent 26%),
+    linear-gradient(180deg, rgba(22, 24, 36, 0.94), rgba(27, 29, 44, 0.97)),
+    #171923;
+}
+
+[data-theme="dark"] body::before {
+  background: rgba(20, 22, 34, 0.24);
+}
+
+[data-theme="dark"] body::after {
+  background: linear-gradient(180deg, transparent, rgba(23, 25, 38, 0.9));
+}
+
+/* 内页保留 hero 图纹理，但用深色渐变压暗到「隐约可见」的程度 */
+[data-theme="dark"] .inner-page,
+[data-theme="dark"] .chess-page {
+  background:
+    radial-gradient(circle at 16% 12%, rgba(242, 154, 189, 0.08), transparent 30%),
+    radial-gradient(circle at 78% 16%, rgba(159, 216, 239, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(22, 24, 36, 0.88), rgba(26, 28, 42, 0.94)),
+    url("/images/hero-bg.webp") center / cover fixed,
+    #171923;
+}
+
+@media (max-width: 900px) {
+  [data-theme="dark"] .inner-page,
+  [data-theme="dark"] .chess-page {
+    background:
+      linear-gradient(180deg, rgba(22, 24, 36, 0.9), rgba(26, 28, 42, 0.95)),
+      url("/images/hero-bg-mobile.avif") center / cover scroll,
+      #171923;
+  }
+}
+
+[data-theme="dark"] .skip-link {
+  border-color: #9fd8ef;
+  background: #252840;
+  color: #dfe5f5;
+  box-shadow: 0 12px 32px rgba(5, 7, 15, 0.5);
+}
+
+[data-theme="dark"] .tag-row span {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: #c3c9dd;
+}
+
+/* —— 导航 —— */
+[data-theme="dark"] .brand-pill {
+  color: #dfe3f2;
+  text-shadow: 0 1px 0 rgba(10, 12, 20, 0.6);
+}
+
+[data-theme="dark"] .brand-pill strong {
+  text-shadow:
+    0 1px 0 rgba(10, 12, 20, 0.72),
+    0 5px 16px rgba(242, 154, 189, 0.22);
+}
+
+[data-theme="dark"] .brand-mascot,
+[data-theme="dark"] .terminal-avatar,
+[data-theme="dark"] .profile-avatar {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #4b3550, #54423a);
+  color: #f4d7e2;
+}
+
+[data-theme="dark"] .site-header--compact .brand-mascot {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .nav-link {
+  color: #c9cede;
+}
+
+[data-theme="dark"] .nav-link:hover,
+[data-theme="dark"] .nav-link.active {
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .nav-command-trigger {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(159, 216, 239, 0.08)),
+    rgba(255, 255, 255, 0.06);
+  color: #c9cede;
+}
+
+[data-theme="dark"] .nav-command-trigger:hover,
+[data-theme="dark"] .nav-command-trigger:focus-visible {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(159, 216, 239, 0.12)),
+    rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .site-header--compact .nav-bookmark,
+[data-theme="dark"] .home-page.is-past-hero .site-header--brandless .nav-bookmark {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(37, 40, 64, 0.94);
+  color: #d8b8ca;
+  box-shadow:
+    0 12px 26px rgba(5, 7, 15, 0.4),
+    inset 0 -8px 0 rgba(242, 154, 189, 0.08);
+}
+
+/* —— 命令面板：便签纸纹样换成深色纸 —— */
+[data-theme="dark"] .command-palette__backdrop {
+  background: rgba(8, 10, 18, 0.5);
+}
+
+[data-theme="dark"] .command-palette__panel {
+  border-color: rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(90deg, transparent 0 42px, rgba(238, 143, 177, 0.13) 42px 43px, transparent 43px),
+    repeating-linear-gradient(180deg, #262a3e 0 31px, rgba(141, 191, 211, 0.09) 31px 32px);
+  box-shadow:
+    0 34px 90px rgba(3, 4, 10, 0.62),
+    0 0 0 5px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .command-palette__header {
+  border-bottom-color: rgba(255, 255, 255, 0.09);
+  background: rgba(37, 40, 62, 0.78);
+}
+
+[data-theme="dark"] .command-palette__badge {
+  border-color: rgba(211, 114, 153, 0.4);
+  background: rgba(216, 118, 157, 0.16);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .command-palette__title h2 {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .command-palette__title p {
+  color: #8f95ad;
+}
+
+[data-theme="dark"] .command-palette__close {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #a6abc2;
+}
+
+[data-theme="dark"] .command-palette__close:hover,
+[data-theme="dark"] .command-palette__close:focus-visible {
+  border-color: rgba(216, 118, 157, 0.5);
+  background: rgba(216, 118, 157, 0.18);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .command-search {
+  border-color: rgba(129, 166, 187, 0.34);
+  background: rgba(22, 24, 38, 0.66);
+  box-shadow:
+    inset 3px 0 0 rgba(216, 118, 157, 0.7),
+    0 8px 22px rgba(3, 4, 10, 0.3);
+  color: #9aa5bd;
+}
+
+[data-theme="dark"] .command-search input {
+  color: #e8eaf4;
+}
+
+[data-theme="dark"] .command-search input::placeholder {
+  color: rgba(166, 171, 194, 0.56);
+}
+
+[data-theme="dark"] .command-search kbd {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 2px 0 rgba(3, 4, 10, 0.3);
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .command-search__clear,
+[data-theme="dark"] .command-palette__status button {
+  color: #8f95ad;
+}
+
+[data-theme="dark"] .command-search__clear:hover,
+[data-theme="dark"] .command-search__clear:focus-visible,
+[data-theme="dark"] .command-palette__status button:hover,
+[data-theme="dark"] .command-palette__status button:focus-visible {
+  background: rgba(216, 118, 157, 0.2);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .command-filters {
+  border-bottom-color: rgba(255, 255, 255, 0.09);
+}
+
+[data-theme="dark"] .command-filter {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .command-filter small {
+  color: #6f7590;
+}
+
+[data-theme="dark"] .command-filter:hover,
+[data-theme="dark"] .command-filter:focus-visible {
+  background: rgba(131, 191, 214, 0.12);
+  color: #cfd6e8;
+}
+
+[data-theme="dark"] .command-filter.is-active {
+  background: rgba(216, 118, 157, 0.2);
+  color: #f0b7cf;
+}
+
+[data-theme="dark"] .command-result {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .command-result:hover,
+[data-theme="dark"] .command-result:focus-visible,
+[data-theme="dark"] .command-result.is-active {
+  border-color: rgba(120, 178, 202, 0.32);
+  background: rgba(131, 191, 214, 0.12);
+  box-shadow:
+    inset 3px 0 0 var(--command-blue, #83bfd6),
+    0 5px 14px rgba(3, 4, 10, 0.28);
+}
+
+[data-theme="dark"] .command-result__icon {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
+  color: #9fb2c8;
+}
+
+[data-theme="dark"] .command-result[data-command-kind="post"] .command-result__icon {
+  background: rgba(216, 118, 157, 0.16);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .command-result[data-command-kind="tag"] .command-result__icon {
+  background: rgba(247, 223, 154, 0.14);
+  color: #e3c878;
+}
+
+[data-theme="dark"] .command-result[data-command-kind="project"] .command-result__icon {
+  background: rgba(127, 187, 167, 0.14);
+  color: #93cfb8;
+}
+
+[data-theme="dark"] .command-result[data-command-kind="page"] .command-result__icon {
+  background: rgba(131, 191, 214, 0.14);
+  color: #9fd0e4;
+}
+
+[data-theme="dark"] .command-result__body strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .command-result__body small {
+  color: rgba(196, 201, 221, 0.72);
+}
+
+[data-theme="dark"] .command-result mark {
+  background: rgba(247, 223, 154, 0.3);
+}
+
+[data-theme="dark"] .command-result__meta {
+  color: rgba(196, 201, 221, 0.62);
+}
+
+[data-theme="dark"] .command-result__group {
+  color: #d795b1;
+}
+
+[data-theme="dark"] .command-result__action {
+  color: #6f7590;
+}
+
+[data-theme="dark"] .command-result:hover .command-result__action,
+[data-theme="dark"] .command-result:focus-visible .command-result__action,
+[data-theme="dark"] .command-result.is-active .command-result__action {
+  color: #9fd0e4;
+}
+
+[data-theme="dark"] .command-empty {
+  color: rgba(196, 201, 221, 0.66);
+}
+
+[data-theme="dark"] .command-empty strong {
+  color: #dfe3f2;
+}
+
+[data-theme="dark"] .command-palette__footer {
+  border-top-color: rgba(255, 255, 255, 0.09);
+  background: rgba(37, 40, 62, 0.82);
+  color: #8f95ad;
+}
+
+[data-theme="dark"] .command-palette__keys kbd {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 2px 0 rgba(3, 4, 10, 0.3);
+  color: #9aa0b8;
+}
+
+/* —— 公告/对话 —— */
+[data-theme="dark"] .announcement-button {
+  color: #c9cede;
+}
+
+[data-theme="dark"] .announcement-dialog::backdrop {
+  background: rgba(8, 10, 18, 0.5);
+}
+
+[data-theme="dark"] .announcement-link {
+  background: rgba(255, 255, 255, 0.1);
+  color: #dfe3f2;
+  box-shadow: 0 10px 26px rgba(5, 7, 15, 0.34);
+}
+
+[data-theme="dark"] .announcement-link:hover,
+[data-theme="dark"] .announcement-link:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+[data-theme="dark"] .icon-button {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* —— 侧栏控制台与音乐播放器 —— */
+[data-theme="dark"] .side-tools__tab {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #c3c9dd;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.1),
+    inset 10px 0 18px rgba(255, 255, 255, 0.05),
+    12px 20px 36px rgba(5, 7, 15, 0.42);
+}
+
+[data-theme="dark"] .side-tools__tab::before {
+  background:
+    radial-gradient(circle at 70% 16%, rgba(255, 255, 255, 0.16) 0 8px, transparent 9px),
+    linear-gradient(180deg, rgba(50, 56, 84, 0.92), rgba(58, 44, 66, 0.9)),
+    rgba(38, 42, 64, 0.88);
+}
+
+[data-theme="dark"] .side-tools__tab::after {
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+}
+
+[data-theme="dark"] .side-tools__open:hover,
+[data-theme="dark"] .side-tools__quick-play:hover,
+[data-theme="dark"] .side-tools__open:focus-visible,
+[data-theme="dark"] .side-tools__quick-play:focus-visible {
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .side-tools__quick-play:hover,
+[data-theme="dark"] .side-tools__quick-play:focus-visible,
+[data-theme="dark"] .side-tools.is-music-playing .side-tools__quick-play {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 22px rgba(207, 115, 151, 0.22);
+}
+
+[data-theme="dark"] .side-console {
+  background:
+    radial-gradient(circle at 14% 8%, rgba(242, 154, 189, 0.12), transparent 30%),
+    radial-gradient(circle at 92% 6%, rgba(159, 216, 239, 0.1), transparent 26%),
+    linear-gradient(180deg, rgba(37, 41, 63, 0.92), rgba(33, 36, 56, 0.9)),
+    rgba(33, 36, 56, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 28px 90px rgba(3, 4, 10, 0.56);
+}
+
+[data-theme="dark"] .side-console::-webkit-scrollbar-thumb {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .side-console::before {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .side-console__badge {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(216, 118, 157, 0.16);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .side-console__header strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .side-console__header small {
+  color: #8f95ad;
+}
+
+[data-theme="dark"] .music-card {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(58, 44, 66, 0.5), rgba(44, 52, 74, 0.46)),
+    rgba(38, 42, 64, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 48px rgba(3, 4, 10, 0.36);
+}
+
+[data-theme="dark"] .music-card__title,
+[data-theme="dark"] .music-card__title strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .music-card__title span {
+  background: rgba(216, 118, 157, 0.18);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .music-source-toggle {
+  background: rgba(255, 255, 255, 0.09);
+  color: #a6abc2;
+  box-shadow: 0 10px 24px rgba(3, 4, 10, 0.28);
+}
+
+[data-theme="dark"] .music-source-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .music-source-panel,
+[data-theme="dark"] .music-progress,
+[data-theme="dark"] .music-volume {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .music-source-panel__mode button {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #c3c9dd;
+}
+
+[data-theme="dark"] .music-source-panel__mode button:hover,
+[data-theme="dark"] .music-source-panel__mode button.is-active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #f2f4fa;
+  box-shadow: 0 10px 18px rgba(3, 4, 10, 0.28);
+}
+
+[data-theme="dark"] .music-source-panel__hint {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .music-card.is-source-loading .music-source-panel__hint {
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .music-card__eyebrow {
+  color: #8f95ad;
+}
+
+[data-theme="dark"] .music-card__main strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .music-card__main small {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .music-card__count {
+  background: rgba(255, 255, 255, 0.08);
+  color: #c3c9dd;
+}
+
+[data-theme="dark"] .music-lyric {
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(135deg, rgba(58, 44, 66, 0.4), rgba(44, 52, 74, 0.34)),
+    rgba(38, 42, 64, 0.42);
+  color: #b7bdd4;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .music-progress__label {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .music-progress__label strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .music-icon-button {
+  background: rgba(255, 255, 255, 0.09);
+  color: #c3c9dd;
+  box-shadow: 0 12px 26px rgba(3, 4, 10, 0.3);
+}
+
+[data-theme="dark"] .music-icon-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .music-volume {
+  color: #c3c9dd;
+}
+
+[data-theme="dark"] .music-volume span {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .music-playlist__toggle {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(58, 44, 66, 0.44), rgba(44, 52, 74, 0.38)),
+    rgba(38, 42, 64, 0.5);
+  color: #c3c9dd;
+  box-shadow: 0 12px 26px rgba(3, 4, 10, 0.28);
+}
+
+[data-theme="dark"] .music-playlist__toggle:hover,
+[data-theme="dark"] .music-playlist__toggle[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f2f4fa;
+  box-shadow: 0 14px 30px rgba(3, 4, 10, 0.34);
+}
+
+[data-theme="dark"] .music-playlist__toggle small {
+  color: #8f95ad;
+}
+
+/* ============================================================
+   暗色主题（[data-theme="dark"]，由 head 防闪烁脚本在渲染前应用）
+   策略：核心语义变量整体换值，硬编码浅色的组件逐域覆盖；
+   pastel 主色保持不变——深色底上粉/蓝/薄荷依然有辨识度。
+   ============================================================ */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e8eaf4;
+  --muted: #a6abc2;
+  --soft: #252840;
+  --paper: rgba(34, 38, 58, 0.72);
+  --paper-strong: rgba(34, 38, 58, 0.9);
+  --line: rgba(255, 255, 255, 0.14);
+  --shadow: 0 24px 80px rgba(5, 7, 15, 0.52);
+}
+
+[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 16% 18%, rgba(242, 154, 189, 0.1), transparent 28%),
+    radial-gradient(circle at 78% 14%, rgba(159, 216, 239, 0.1), transparent 26%),
+    linear-gradient(180deg, rgba(22, 24, 36, 0.94), rgba(27, 29, 44, 0.97)),
+    #171923;
+}
+
+[data-theme="dark"] body::before {
+  background: rgba(20, 22, 34, 0.24);
+}
+
+[data-theme="dark"] body::after {
+  background: linear-gradient(180deg, transparent, rgba(23, 25, 38, 0.9));
+}
+
+/* 内页保留 hero 图纹理，但用深色渐变压暗到「隐约可见」的程度 */
+[data-theme="dark"] .inner-page,
+[data-theme="dark"] .chess-page {
+  background:
+    radial-gradient(circle at 16% 12%, rgba(242, 154, 189, 0.08), transparent 30%),
+    radial-gradient(circle at 78% 16%, rgba(159, 216, 239, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(22, 24, 36, 0.88), rgba(26, 28, 42, 0.94)),
+    url("/images/hero-bg.webp") center / cover fixed,
+    #171923;
+}
+
+@media (max-width: 900px) {
+  [data-theme="dark"] .inner-page,
+  [data-theme="dark"] .chess-page {
+    background:
+      linear-gradient(180deg, rgba(22, 24, 36, 0.9), rgba(26, 28, 42, 0.95)),
+      url("/images/hero-bg-mobile.avif") center / cover scroll,
+      #171923;
+  }
+}
+
+[data-theme="dark"] .skip-link {
+  border-color: #9fd8ef;
+  background: #252840;
+  color: #dfe5f5;
+  box-shadow: 0 12px 32px rgba(5, 7, 15, 0.5);
+}
+
+[data-theme="dark"] .tag-row span {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: #c3c9dd;
+}
+
+/* —— 导航 —— */
+[data-theme="dark"] .brand-pill {
+  color: #dfe3f2;
+  text-shadow: 0 1px 0 rgba(10, 12, 20, 0.6);
+}
+
+[data-theme="dark"] .brand-pill strong {
+  text-shadow:
+    0 1px 0 rgba(10, 12, 20, 0.72),
+    0 5px 16px rgba(242, 154, 189, 0.22);
+}
+
+[data-theme="dark"] .brand-mascot,
+[data-theme="dark"] .terminal-avatar,
+[data-theme="dark"] .profile-avatar {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #4b3550, #54423a);
+  color: #f4d7e2;
+}
+
+[data-theme="dark"] .site-header--compact .brand-mascot {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .nav-link {
+  color: #c9cede;
+}
+
+[data-theme="dark"] .nav-link:hover,
+[data-theme="dark"] .nav-link.active {
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .nav-command-trigger {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(159, 216, 239, 0.08)),
+    rgba(255, 255, 255, 0.06);
+  color: #c9cede;
+}
+
+[data-theme="dark"] .nav-command-trigger:hover,
+[data-theme="dark"] .nav-command-trigger:focus-visible {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(159, 216, 239, 0.12)),
+    rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .site-header--compact .nav-bookmark,
+[data-theme="dark"] .home-page.is-past-hero .site-header--brandless .nav-bookmark {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(37, 40, 64, 0.94);
+  color: #d8b8ca;
+  box-shadow:
+    0 12px 26px rgba(5, 7, 15, 0.4),
+    inset 0 -8px 0 rgba(242, 154, 189, 0.08);
+}
+
+/* —— 命令面板：便签纸纹样换成深色纸 —— */
+[data-theme="dark"] .command-palette__backdrop {
+  background: rgba(8, 10, 18, 0.5);
+}
+
+[data-theme="dark"] .command-palette__panel {
+  border-color: rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(90deg, transparent 0 42px, rgba(238, 143, 177, 0.13) 42px 43px, transparent 43px),
+    repeating-linear-gradient(180deg, #262a3e 0 31px, rgba(141, 191, 211, 0.09) 31px 32px);
+  box-shadow:
+    0 34px 90px rgba(3, 4, 10, 0.62),
+    0 0 0 5px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .command-palette__header {
+  border-bottom-color: rgba(255, 255, 255, 0.09);
+  background: rgba(37, 40, 62, 0.78);
+}
+
+[data-theme="dark"] .command-palette__badge {
+  border-color: rgba(211, 114, 153, 0.4);
+  background: rgba(216, 118, 157, 0.16);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .command-palette__title h2 {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .command-palette__title p {
+  color: #8f95ad;
+}
+
+[data-theme="dark"] .command-palette__close {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #a6abc2;
+}
+
+[data-theme="dark"] .command-palette__close:hover,
+[data-theme="dark"] .command-palette__close:focus-visible {
+  border-color: rgba(216, 118, 157, 0.5);
+  background: rgba(216, 118, 157, 0.18);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .command-search {
+  border-color: rgba(129, 166, 187, 0.34);
+  background: rgba(22, 24, 38, 0.66);
+  box-shadow:
+    inset 3px 0 0 rgba(216, 118, 157, 0.7),
+    0 8px 22px rgba(3, 4, 10, 0.3);
+  color: #9aa5bd;
+}
+
+[data-theme="dark"] .command-search input {
+  color: #e8eaf4;
+}
+
+[data-theme="dark"] .command-search input::placeholder {
+  color: rgba(166, 171, 194, 0.56);
+}
+
+[data-theme="dark"] .command-search kbd {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 2px 0 rgba(3, 4, 10, 0.3);
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .command-search__clear,
+[data-theme="dark"] .command-palette__status button {
+  color: #8f95ad;
+}
+
+[data-theme="dark"] .command-search__clear:hover,
+[data-theme="dark"] .command-search__clear:focus-visible,
+[data-theme="dark"] .command-palette__status button:hover,
+[data-theme="dark"] .command-palette__status button:focus-visible {
+  background: rgba(216, 118, 157, 0.2);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .command-filters {
+  border-bottom-color: rgba(255, 255, 255, 0.09);
+}
+
+[data-theme="dark"] .command-filter {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .command-filter small {
+  color: #6f7590;
+}
+
+[data-theme="dark"] .command-filter:hover,
+[data-theme="dark"] .command-filter:focus-visible {
+  background: rgba(131, 191, 214, 0.12);
+  color: #cfd6e8;
+}
+
+[data-theme="dark"] .command-filter.is-active {
+  background: rgba(216, 118, 157, 0.2);
+  color: #f0b7cf;
+}
+
+[data-theme="dark"] .command-result {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .command-result:hover,
+[data-theme="dark"] .command-result:focus-visible,
+[data-theme="dark"] .command-result.is-active {
+  border-color: rgba(120, 178, 202, 0.32);
+  background: rgba(131, 191, 214, 0.12);
+  box-shadow:
+    inset 3px 0 0 var(--command-blue, #83bfd6),
+    0 5px 14px rgba(3, 4, 10, 0.28);
+}
+
+[data-theme="dark"] .command-result__icon {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.07);
+  color: #9fb2c8;
+}
+
+[data-theme="dark"] .command-result[data-command-kind="post"] .command-result__icon {
+  background: rgba(216, 118, 157, 0.16);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .command-result[data-command-kind="tag"] .command-result__icon {
+  background: rgba(247, 223, 154, 0.14);
+  color: #e3c878;
+}
+
+[data-theme="dark"] .command-result[data-command-kind="project"] .command-result__icon {
+  background: rgba(127, 187, 167, 0.14);
+  color: #93cfb8;
+}
+
+[data-theme="dark"] .command-result[data-command-kind="page"] .command-result__icon {
+  background: rgba(131, 191, 214, 0.14);
+  color: #9fd0e4;
+}
+
+[data-theme="dark"] .command-result__body strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .command-result__body small {
+  color: rgba(196, 201, 221, 0.72);
+}
+
+[data-theme="dark"] .command-result mark {
+  background: rgba(247, 223, 154, 0.3);
+}
+
+[data-theme="dark"] .command-result__meta {
+  color: rgba(196, 201, 221, 0.62);
+}
+
+[data-theme="dark"] .command-result__group {
+  color: #d795b1;
+}
+
+[data-theme="dark"] .command-result__action {
+  color: #6f7590;
+}
+
+[data-theme="dark"] .command-result:hover .command-result__action,
+[data-theme="dark"] .command-result:focus-visible .command-result__action,
+[data-theme="dark"] .command-result.is-active .command-result__action {
+  color: #9fd0e4;
+}
+
+[data-theme="dark"] .command-empty {
+  color: rgba(196, 201, 221, 0.66);
+}
+
+[data-theme="dark"] .command-empty strong {
+  color: #dfe3f2;
+}
+
+[data-theme="dark"] .command-palette__footer {
+  border-top-color: rgba(255, 255, 255, 0.09);
+  background: rgba(37, 40, 62, 0.82);
+  color: #8f95ad;
+}
+
+[data-theme="dark"] .command-palette__keys kbd {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 2px 0 rgba(3, 4, 10, 0.3);
+  color: #9aa0b8;
+}
+
+/* —— 公告/对话 —— */
+[data-theme="dark"] .announcement-button {
+  color: #c9cede;
+}
+
+[data-theme="dark"] .announcement-dialog::backdrop {
+  background: rgba(8, 10, 18, 0.5);
+}
+
+[data-theme="dark"] .announcement-link {
+  background: rgba(255, 255, 255, 0.1);
+  color: #dfe3f2;
+  box-shadow: 0 10px 26px rgba(5, 7, 15, 0.34);
+}
+
+[data-theme="dark"] .announcement-link:hover,
+[data-theme="dark"] .announcement-link:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+[data-theme="dark"] .icon-button {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* —— 侧栏控制台与音乐播放器 —— */
+[data-theme="dark"] .side-tools__tab {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #c3c9dd;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.1),
+    inset 10px 0 18px rgba(255, 255, 255, 0.05),
+    12px 20px 36px rgba(5, 7, 15, 0.42);
+}
+
+[data-theme="dark"] .side-tools__tab::before {
+  background:
+    radial-gradient(circle at 70% 16%, rgba(255, 255, 255, 0.16) 0 8px, transparent 9px),
+    linear-gradient(180deg, rgba(50, 56, 84, 0.92), rgba(58, 44, 66, 0.9)),
+    rgba(38, 42, 64, 0.88);
+}
+
+[data-theme="dark"] .side-tools__tab::after {
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+}
+
+[data-theme="dark"] .side-tools__open:hover,
+[data-theme="dark"] .side-tools__quick-play:hover,
+[data-theme="dark"] .side-tools__open:focus-visible,
+[data-theme="dark"] .side-tools__quick-play:focus-visible {
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .side-tools__quick-play:hover,
+[data-theme="dark"] .side-tools__quick-play:focus-visible,
+[data-theme="dark"] .side-tools.is-music-playing .side-tools__quick-play {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 22px rgba(207, 115, 151, 0.22);
+}
+
+[data-theme="dark"] .side-console {
+  background:
+    radial-gradient(circle at 14% 8%, rgba(242, 154, 189, 0.12), transparent 30%),
+    radial-gradient(circle at 92% 6%, rgba(159, 216, 239, 0.1), transparent 26%),
+    linear-gradient(180deg, rgba(37, 41, 63, 0.92), rgba(33, 36, 56, 0.9)),
+    rgba(33, 36, 56, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 28px 90px rgba(3, 4, 10, 0.56);
+}
+
+[data-theme="dark"] .side-console::-webkit-scrollbar-thumb {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .side-console::before {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .side-console__badge {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(216, 118, 157, 0.16);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .side-console__header strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .side-console__header small {
+  color: #8f95ad;
+}
+
+[data-theme="dark"] .music-card {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(58, 44, 66, 0.5), rgba(44, 52, 74, 0.46)),
+    rgba(38, 42, 64, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 48px rgba(3, 4, 10, 0.36);
+}
+
+[data-theme="dark"] .music-card__title,
+[data-theme="dark"] .music-card__title strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .music-card__title span {
+  background: rgba(216, 118, 157, 0.18);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .music-source-toggle {
+  background: rgba(255, 255, 255, 0.09);
+  color: #a6abc2;
+  box-shadow: 0 10px 24px rgba(3, 4, 10, 0.28);
+}
+
+[data-theme="dark"] .music-source-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .music-source-panel,
+[data-theme="dark"] .music-progress,
+[data-theme="dark"] .music-volume {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .music-source-panel__mode button {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #c3c9dd;
+}
+
+[data-theme="dark"] .music-source-panel__mode button:hover,
+[data-theme="dark"] .music-source-panel__mode button.is-active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #f2f4fa;
+  box-shadow: 0 10px 18px rgba(3, 4, 10, 0.28);
+}
+
+[data-theme="dark"] .music-source-panel__hint {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .music-card.is-source-loading .music-source-panel__hint {
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .music-card__eyebrow {
+  color: #8f95ad;
+}
+
+[data-theme="dark"] .music-card__main strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .music-card__main small {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .music-card__count {
+  background: rgba(255, 255, 255, 0.08);
+  color: #c3c9dd;
+}
+
+[data-theme="dark"] .music-lyric {
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(135deg, rgba(58, 44, 66, 0.4), rgba(44, 52, 74, 0.34)),
+    rgba(38, 42, 64, 0.42);
+  color: #b7bdd4;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .music-progress__label {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .music-progress__label strong {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .music-icon-button {
+  background: rgba(255, 255, 255, 0.09);
+  color: #c3c9dd;
+  box-shadow: 0 12px 26px rgba(3, 4, 10, 0.3);
+}
+
+[data-theme="dark"] .music-icon-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .music-volume {
+  color: #c3c9dd;
+}
+
+[data-theme="dark"] .music-volume span {
+  color: #9aa0b8;
+}
+
+[data-theme="dark"] .music-playlist__toggle {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(58, 44, 66, 0.44), rgba(44, 52, 74, 0.38)),
+    rgba(38, 42, 64, 0.5);
+  color: #c3c9dd;
+  box-shadow: 0 12px 26px rgba(3, 4, 10, 0.28);
+}
+
+[data-theme="dark"] .music-playlist__toggle:hover,
+[data-theme="dark"] .music-playlist__toggle[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f2f4fa;
+  box-shadow: 0 14px 30px rgba(3, 4, 10, 0.34);
+}
+
+[data-theme="dark"] .music-playlist__toggle small {
+  color: #8f95ad;
+}
+
+/* —— 外观设置卡片（Aria Dock 控制台内） —— */
+.theme-card {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(255, 247, 252, 0.62), rgba(237, 249, 255, 0.48)),
+    rgba(255, 255, 255, 0.5);
+  padding: 16px 18px;
+  box-shadow: 0 12px 26px rgba(83, 96, 126, 0.08);
+}
+
+.theme-card__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+}
+
+.theme-card__title span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255, 226, 239, 0.62);
+  color: #cf7397;
+}
+
+.theme-card__title strong {
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.theme-card__choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.theme-card__choices button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.56);
+  color: var(--muted);
+  padding: 0 10px;
+  font-size: 0.8rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.theme-card__choices button:hover,
+.theme-card__choices button:focus-visible {
+  outline: 0;
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.84);
+  color: #354056;
+}
+
+.theme-card__choices button.is-active {
+  border-color: rgba(216, 118, 157, 0.44);
+  background: #ffeef4;
+  color: #9d4e6d;
+  box-shadow: 0 8px 18px rgba(207, 115, 151, 0.16);
+}
+
+[data-theme="dark"] .theme-card {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(58, 44, 66, 0.44), rgba(44, 52, 74, 0.38)),
+    rgba(38, 42, 64, 0.5);
+  box-shadow: 0 12px 26px rgba(3, 4, 10, 0.28);
+}
+
+[data-theme="dark"] .theme-card__title {
+  color: #eceef7;
+}
+
+[data-theme="dark"] .theme-card__title span {
+  background: rgba(216, 118, 157, 0.18);
+  color: #eba8c4;
+}
+
+[data-theme="dark"] .theme-card__choices button {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #c3c9dd;
+}
+
+[data-theme="dark"] .theme-card__choices button:hover,
+[data-theme="dark"] .theme-card__choices button:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  color: #f2f4fa;
+}
+
+[data-theme="dark"] .theme-card__choices button.is-active {
+  border-color: rgba(216, 118, 157, 0.5);
+  background: rgba(216, 118, 157, 0.2);
+  color: #f0b7cf;
+  box-shadow: 0 8px 18px rgba(3, 4, 10, 0.3);
 }
