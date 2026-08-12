@@ -6,7 +6,9 @@ dist/
 coverage/
 .lighthouseci/
 playwright-report/
+playwright-report.old/
 test-results/
+test-results.old/
 .env
 .env.*
 *.log
