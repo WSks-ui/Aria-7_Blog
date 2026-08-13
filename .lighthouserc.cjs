@@ -1,6 +1,7 @@
 /**
- * Lighthouse CI 门禁草案。
- * 依赖在维护提交中锁定为 @lhci/cli@0.15.1 后，可通过 `lhci autorun` 直接执行。
+ * Lighthouse CI 门禁配置。
+ * LHCI 的发布周期慢于 Chromium；package.json 会覆盖其 Lighthouse 版本，
+ * 避免旧 trace engine 解析新版 Playwright Chromium 时偶发丢失 LCP。
  */
 module.exports = {
   ci: {
