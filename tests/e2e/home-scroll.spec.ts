@@ -16,9 +16,11 @@ const scrollToProgress = async (page: Page, progress: number) => {
   }, progress);
   const reduceMotion = await page.evaluate(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const expectedProgress = reduceMotion ? (progress >= 0.1 ? 1 : 0) : progress;
+  // 页面启用了平滑滚动，目标进度会经过多个中间值。这里必须与控制器写入的三位小数精度一致；
+  // 若只比较一位小数，轮询会在 0.45～0.55 的途中提前结束，使后续揭示状态断言读取到半成品。
   await expect.poll(() => page.evaluate(() => Number.parseFloat(
     getComputedStyle(document.querySelector<HTMLElement>("[data-home-data-layer]")!).getPropertyValue("--home-data-progress"),
-  ))).toBeCloseTo(expectedProgress, 1);
+  ))).toBeCloseTo(expectedProgress, 3);
 };
 
 const revealOpacity = (page: Page, name: string) => page.locator(`[data-home-reveal="${name}"]`).evaluate(
