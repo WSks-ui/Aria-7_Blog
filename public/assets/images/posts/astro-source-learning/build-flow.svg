@@ -1,0 +1,67 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#1E293B"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#94A3B8"/>
+    </marker>
+    <style>
+      .title { fill: #F8FAFC; font: 700 34px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      .subtitle { fill: #CBD5E1; font: 500 18px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      .boxTitle { fill: #E2E8F0; font: 700 22px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      .boxText { fill: #CBD5E1; font: 500 16px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      .small { fill: #94A3B8; font: 500 14px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      .accent { fill: #7DD3FC; font: 700 16px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="700" rx="28" fill="url(#bg)"/>
+  <text x="60" y="70" class="title">Astro build 主干流程</text>
+  <text x="60" y="105" class="subtitle">从 CLI 命令进入核心构建，再由 AstroBuilder 统一调度</text>
+
+  <rect x="60" y="150" width="210" height="92" rx="18" fill="#1D4ED8" fill-opacity="0.18" stroke="#60A5FA"/>
+  <text x="90" y="190" class="boxTitle">pnpm build</text>
+  <text x="90" y="220" class="boxText">CLI 入口</text>
+
+  <rect x="340" y="150" width="250" height="92" rx="18" fill="url(#card)" stroke="#475569"/>
+  <text x="370" y="190" class="boxTitle">读取配置</text>
+  <text x="370" y="220" class="boxText">resolveConfig / createSettings</text>
+
+  <rect x="660" y="150" width="260" height="92" rx="18" fill="url(#card)" stroke="#475569"/>
+  <text x="690" y="190" class="boxTitle">创建 AstroBuilder</text>
+  <text x="690" y="220" class="boxText">构建总调度器</text>
+
+  <rect x="990" y="150" width="150" height="92" rx="18" fill="#0F766E" fill-opacity="0.18" stroke="#2DD4BF"/>
+  <text x="1018" y="190" class="boxTitle">run()</text>
+  <text x="1018" y="220" class="boxText">统一入口</text>
+
+  <path d="M270 196H340" stroke="#94A3B8" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M590 196H660" stroke="#94A3B8" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M920 196H990" stroke="#94A3B8" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="150" y="330" width="360" height="220" rx="22" fill="#111827" stroke="#334155"/>
+  <text x="180" y="375" class="boxTitle">setup()：开工前准备</text>
+  <text x="180" y="415" class="boxText">1. 扫描路由</text>
+  <text x="180" y="447" class="boxText">2. 初始化 Vite</text>
+  <text x="180" y="479" class="boxText">3. 生成类型文件</text>
+  <text x="180" y="522" class="accent">对应日志： [types] Generated</text>
+
+  <rect x="610" y="330" width="440" height="220" rx="22" fill="#111827" stroke="#334155"/>
+  <text x="640" y="375" class="boxTitle">build()：正式构建</text>
+  <text x="640" y="415" class="boxText">1. 打印 output / mode / directory</text>
+  <text x="640" y="447" class="boxText">2. 调用 Vite 打包 JS / CSS</text>
+  <text x="640" y="479" class="boxText">3. 逐页生成静态路由</text>
+  <text x="640" y="522" class="accent">对应日志： [build] / [vite] / generating static routes</text>
+
+  <path d="M1065 242V290H330V330" stroke="#94A3B8" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M1065 242V290H830V330" stroke="#94A3B8" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="420" y="600" width="360" height="56" rx="16" fill="#1E293B" stroke="#475569"/>
+  <text x="462" y="636" class="boxTitle">产物输出到 dist/</text>
+</svg>

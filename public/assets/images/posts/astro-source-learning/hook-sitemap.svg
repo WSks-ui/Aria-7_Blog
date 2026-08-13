@@ -1,0 +1,51 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1120"/>
+      <stop offset="1" stop-color="#172554"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#93C5FD"/>
+    </marker>
+    <style>
+      .title { fill: #F8FAFC; font: 700 34px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      .subtitle { fill: #BFDBFE; font: 500 18px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      .h { fill: #E0F2FE; font: 700 22px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      .t { fill: #DBEAFE; font: 500 16px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      .s { fill: #93C5FD; font: 500 14px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="760" rx="28" fill="url(#bg)"/>
+  <text x="60" y="72" class="title">hook 机制与 sitemap 集成</text>
+  <text x="60" y="106" class="subtitle">核心代码负责广播事件，integration 负责在对应时刻响应</text>
+
+  <rect x="70" y="170" width="470" height="430" rx="24" fill="#0F172A" stroke="#334155"/>
+  <text x="105" y="215" class="h">Astro 核心</text>
+  <text x="105" y="255" class="t">构建流程推进到不同阶段：</text>
+  <rect x="105" y="290" width="400" height="66" rx="16" fill="#1E293B" stroke="#475569"/>
+  <text x="130" y="330" class="t">astro:routes:resolved</text>
+  <rect x="105" y="382" width="400" height="66" rx="16" fill="#1E293B" stroke="#475569"/>
+  <text x="130" y="422" class="t">astro:config:done</text>
+  <rect x="105" y="474" width="400" height="66" rx="16" fill="#1E293B" stroke="#475569"/>
+  <text x="130" y="514" class="t">astro:build:done</text>
+  <text x="105" y="570" class="s">runHookBuildDone() 会遍历所有 integration</text>
+
+  <rect x="660" y="170" width="470" height="430" rx="24" fill="#0F172A" stroke="#334155"/>
+  <text x="695" y="215" class="h">@astrojs/sitemap</text>
+  <text x="695" y="255" class="t">注册自己的 hooks：</text>
+  <rect x="695" y="290" width="400" height="66" rx="16" fill="#0F3D2E" stroke="#2DD4BF"/>
+  <text x="720" y="330" class="t">保存 routes 列表</text>
+  <rect x="695" y="382" width="400" height="66" rx="16" fill="#0F3D2E" stroke="#2DD4BF"/>
+  <text x="720" y="422" class="t">保存 site / base 等配置</text>
+  <rect x="695" y="474" width="400" height="66" rx="16" fill="#14532D" stroke="#4ADE80"/>
+  <text x="720" y="514" class="t">生成 sitemap.xml / sitemap-index.xml</text>
+  <text x="695" y="570" class="s">过滤 404/500，拼接完整 URL，写入 dist/</text>
+
+  <path d="M505 323H695" stroke="#93C5FD" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M505 415H695" stroke="#93C5FD" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M505 507H695" stroke="#93C5FD" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <rect x="280" y="650" width="650" height="62" rx="18" fill="#1E293B" stroke="#475569"/>
+  <text x="320" y="690" class="h">hook 的本质：到某个时刻时，自动调用预先登记的函数</text>
+</svg>
