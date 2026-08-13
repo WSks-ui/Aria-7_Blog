@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { dismissSplash, waitForInteractions } from "./helpers";
+import { dismissSplash, waitForInteractions, waitForVisualAssets } from "./helpers";
 
 const pages = [
   { name: "home", path: "/" },
@@ -16,6 +16,7 @@ for (const entry of pages) {
     if (entry.path === "/") await dismissSplash(page);
     await waitForInteractions(page);
     await page.locator("main").first().waitFor({ state: "visible" });
+    await waitForVisualAssets(page);
 
     const layout = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,

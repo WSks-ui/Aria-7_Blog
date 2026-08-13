@@ -4,6 +4,33 @@ export const waitForInteractions = async (page: Page) => {
   await expect.poll(() => page.locator("body").getAttribute("data-aria-interactions-ready")).toBe("true");
 };
 
+export const waitForVisualAssets = async (page: Page) => {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+  });
+
+  // 图片使用 lazy loading 与异步解码。DOM 和交互已经就绪时，首屏图片仍可能处于占位尺寸或待解码状态；
+  // 只等待与视口相交的图片，既固定视觉基线的截取时机，也不会被页面下方未触发加载的资源阻塞。
+  await expect.poll(() => page.evaluate(() => [...document.images]
+    .filter((image) => {
+      const rect = image.getBoundingClientRect();
+      return rect.bottom > 0 && rect.right > 0 && rect.top < window.innerHeight && rect.left < window.innerWidth;
+    })
+    .every((image) => image.complete && image.naturalWidth > 0)), {
+    message: "首屏可见图片应全部加载完成",
+  }).toBe(true);
+
+  await page.evaluate(async () => {
+    const visibleImages = [...document.images].filter((image) => {
+      const rect = image.getBoundingClientRect();
+      return rect.bottom > 0 && rect.right > 0 && rect.top < window.innerHeight && rect.left < window.innerWidth;
+    });
+    await Promise.all(visibleImages.map((image) => image.decode()));
+    // decode() 完成只保证位图可用；再跨两个渲染帧，确保尺寸计算和合成层都已采用最终图像。
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+};
+
 export const dismissSplash = async (page: Page, method: "click" | "enter" = "click") => {
   const splash = page.locator("#aria-welcome-splash");
   if (await splash.count() === 0) return;

@@ -21,8 +21,9 @@ export default defineConfig({
     toHaveScreenshot: {
       animations: "disabled",
       maxDiffPixelRatio: 0.01,
-      // 基线由 Windows 本机构建、在 Linux CI 校验；路径不包含平台名，才能真正共享同一组视觉契约。
-      pathTemplate: "{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}{-projectName}{ext}",
+      // 字体回退与透明叠层的栅格化结果受操作系统影响；各平台独立维护基线，
+      // 仍使用同一 1% 像素阈值，避免为兼容跨平台噪声而放宽真实布局回归门禁。
+      pathTemplate: "{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}{-projectName}-{platform}{ext}",
     },
   },
   use: {
