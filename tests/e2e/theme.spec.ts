@@ -39,19 +39,21 @@ test.describe("主题系统（亮/暗/跟随系统）", () => {
     await ensureDockOpen(page);
     await expect(page.locator("[data-theme-choice='dark']")).toBeVisible();
     await page.locator("[data-theme-choice='dark']").click({ force: true });
-    expect((await themeOf(page)).theme).toBe("dark");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(page.locator("[data-theme-choice='dark']")).toHaveClass(/is-active/);
-    expect(await page.evaluate(() => localStorage.getItem("aria-theme"))).toBe("dark");
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("aria-theme"))).toBe("dark");
 
     // 刷新后保持（控制台 pin 状态也会自动恢复）
     await page.reload({ waitUntil: "networkidle" });
-    expect((await themeOf(page)).theme).toBe("dark");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
     // 切回亮色同样保持
     await ensureDockOpen(page);
     await page.locator("[data-theme-choice='light']").click({ force: true });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("aria-theme"))).toBe("light");
     await page.reload({ waitUntil: "networkidle" });
-    expect((await themeOf(page)).theme).toBe("light");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
 
   test("跟随系统模式响应系统主题变化", async ({ page, browserName }) => {

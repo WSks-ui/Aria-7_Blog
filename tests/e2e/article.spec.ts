@@ -52,5 +52,5 @@ test("文章关系、标签归档与分类归档使用公开内容目录", async
 
   await page.goto("/blog/categories/技术/");
   await expect(page.getByRole("heading", { level: 1, name: "技术" })).toBeVisible();
-  await expect(page.locator(".archive-post-grid .post-card")).toHaveCount(5);
+  await expect(page.locator(".archive-post-grid .post-card")).toHaveCount(6);
 });
