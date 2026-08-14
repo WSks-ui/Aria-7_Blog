@@ -47,7 +47,15 @@ const installNetworkSandbox = async (page: Page, issues: RuntimeIssues) => {
             marker.className = "giscus-mock";
             marker.setAttribute("role", "status");
             marker.textContent = "Giscus mock loaded";
-            root?.append(marker);
+            // 模拟 Giscus 的公开 DOM 结构，同时刻意不写内联宽度：
+            // 这样端到端测试能覆盖严格 CSP 下 iframe 退回 300px 默认宽度的回归。
+            const container = document.createElement("div");
+            container.className = "giscus";
+            const frame = document.createElement("iframe");
+            frame.className = "giscus-frame";
+            frame.title = "Comments";
+            container.append(frame);
+            root?.append(marker, container);
           })();`,
         });
       } else {

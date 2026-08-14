@@ -31,6 +31,13 @@ test("Giscus 使用本地 mock 加载，不依赖公网", async ({ page }) => {
 
   await expect(comments.locator(".giscus-mock")).toHaveText("Giscus mock loaded");
   await expect(comments).toHaveAttribute("data-giscus-loaded", "true");
+
+  const giscus = comments.locator(".giscus");
+  const giscusFrame = comments.locator(".giscus-frame");
+  const containerWidth = await giscus.evaluate((node) => node.getBoundingClientRect().width);
+  const frameWidth = await giscusFrame.evaluate((node) => node.getBoundingClientRect().width);
+  expect(containerWidth).toBeGreaterThan(0);
+  expect(frameWidth).toBeCloseTo(containerWidth, 0);
 });
 
 test("文章关系、标签归档与分类归档使用公开内容目录", async ({ page }) => {

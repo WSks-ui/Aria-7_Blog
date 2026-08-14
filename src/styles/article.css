@@ -425,6 +425,23 @@
   background: rgba(255, 255, 255, 0.56);
 }
 
+/*
+ * Giscus 的 client.js 会动态插入一段内联样式来撑满 iframe，但本站 CSP 明确禁止
+ * 第三方内联样式；若这里不提供同源规则，iframe 会退回浏览器默认的 300px 宽度。
+ * 这些 class 属于 Giscus 的公开 DOM 结构，升级评论脚本时需同步确认命名没有变化。
+ */
+.comments-shell .giscus,
+.comments-shell .giscus-frame {
+  width: 100%;
+}
+
+.comments-shell .giscus-frame {
+  display: block;
+  min-height: 150px;
+  border: 0;
+  color-scheme: normal;
+}
+
 .comments-shell__header {
   display: grid;
   gap: 7px;
