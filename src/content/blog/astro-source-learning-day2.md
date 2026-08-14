@@ -1,18 +1,18 @@
 ---
-“title”: “Astro源码学习 Day2:build流程与hook机制”
-“description”: “梳理astro build执行链路,理解core与integration分工,搞清Vite/SSR/岛屿架构/hydrate这些概念”
-“pubDate”: “2026-08-13”
-“tags”:
-  - “Astro”
-  - “源码学习”
-“keywords”:
-  - “Astro构建”
-  - “hook”
-  - “Vite”
-  - “SSR”
-  - “hydrate”
-“category”: “技术”
-“cover”: “/images/astro-learning/astro-logo.png”
+"title": "Astro源码学习 Day2:build流程与hook机制"
+"description": "梳理astro build执行链路,理解core与integration分工,搞清Vite/SSR/岛屿架构/hydrate这些概念"
+"pubDate": "2026-08-13"
+"tags":
+  - "Astro"
+  - "源码学习"
+"keywords":
+  - "Astro构建"
+  - "hook"
+  - "Vite"
+  - "SSR"
+  - "hydrate"
+"category": "技术"
+"cover": "/images/astro-learning/astro-logo.png"
 ---
 
 ## build主流程
